@@ -5,6 +5,12 @@ let currentTrack = JSON.parse(localStorage.getItem('currentTrack')) || {
     artist: "Добавьте первый трек!"
 };
 
+// Экспорт для админки
+window.musicQueue = musicQueue;
+window.currentTrack = currentTrack;
+window.saveQueue = saveQueue;
+window.updateDisplay = updateDisplay;
+
 // DonationAlerts
 const PROXY_URL = 'https://music-queue-app.vercel.app/api/donation-proxy';
 let daAccessToken = null;
