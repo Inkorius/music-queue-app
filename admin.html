@@ -4,96 +4,386 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель управления - Музыка на стрим</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #f5f5f5;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
+        .admin-container {
+            max-width: 1000px;
+            margin: 20px auto;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        h1 {
-            color: #333;
+        .admin-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
         }
         
-        .controls {
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
             margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 5px;
         }
         
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            background: #007bff;
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 25px;
             cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
         
-        button:hover {
-            background: #0056b3;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
         
-        #queue {
-            margin-top: 20px;
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
         }
         
-        .queue-item {
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin: 5px 0;
-            border-radius: 5px;
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .input-group {
             display: flex;
-            justify-content: space-between;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .donation-item {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 4px solid gold;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Панель управления музыкой</h1>
-        
-        <div class="controls">
-            <h3>Управление очередью</h3>
-            <button onclick="playNext()">▶ Следующий трек</button>
-            <button onclick="skipTrack()">⏭ Пропустить</button>
-            <button onclick="clearQueue()">🗑 Очистить очередь</button>
+    <div class="admin-container">
+        <div class="admin-section">
+            <h1>🎮 Панель управления музыкой</h1>
+            <p>Управляйте очередью и настройками музыки на стриме</p>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="queueCount">0</div>
+                    <div class="stat-label">Треков в очереди</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPlayed">0</div>
+                    <div class="stat-label">Всего проиграно</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="donationsCount">0</div>
+                    <div class="stat-label">Донатов сегодня</div>
+                </div>
+            </div>
         </div>
         
-        <div id="queue">
-            <h3>Текущая очередь</h3>
-            <div id="queueList"></div>
+        <div class="admin-section">
+            <h2>🎵 Управление очередью</h2>
+            
+            <div class="control-buttons">
+                <button class="btn btn-success" onclick="playNext()">
+                    ▶ Следующий трек
+                </button>
+                <button class="btn btn-warning" onclick="skipCurrent()">
+                    ⏭ Пропустить текущий
+                </button>
+                <button class="btn btn-danger" onclick="clearQueue()">
+                    🗑 Очистить всю очередь
+                </button>
+                <button class="btn" onclick="shuffleQueue()">
+                    🔀 Перемешать очередь
+                </button>
+            </div>
         </div>
         
-        <div>
-            <h3>Ручное добавление трека</h3>
-            <input type="text" id="trackInput" placeholder="Название трека">
-            <button onclick="addTrack()">Добавить</button>
+        <div class="admin-section">
+            <h2>➕ Добавить трек вручную</h2>
+            <div class="input-group">
+                <input type="text" id="trackInput" placeholder="Название трека и исполнитель">
+                <input type="text" id="donorInput" placeholder="Имя донатера (опционально)">
+                <button class="btn" id="addTrackBtn">Добавить в очередь</button>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="importInput" placeholder="Список треков через запятую">
+                <button class="btn" onclick="importTracks()">Импортировать</button>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>📋 Текущая очередь (<span id="queueCount2">0</span> треков)</h2>
+            <div id="adminQueueList" class="queue">
+                <p>Очередь пуста</p>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>⚙️ Настройки</h2>
+            <div class="control-buttons">
+                <button class="btn" onclick="exportQueue()">📥 Экспорт очереди</button>
+                <button class="btn" onclick="importQueue()">📤 Импорт очереди</button>
+                <button class="btn btn-warning" onclick="resetAll()">🔄 Сбросить всё</button>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <label style="display: block; margin-bottom: 10px;">
+                    <input type="checkbox" id="autoPlay" checked>
+                    Автопроигрывание следующего трека
+                </label>
+                <label style="display: block; margin-bottom: 10px;">
+                    <input type="checkbox" id="showDonations" checked>
+                    Показывать донаты на виджете
+                </label>
+                <label style="display: block; margin-bottom: 10px;">
+                    <input type="checkbox" id="soundNotify" checked>
+                    Звуковые уведомления
+                </label>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>🔗 Ссылки</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="https://inkorius.github.io/music-queue-app/" target="_blank" 
+                   style="color: #ffeb3b; text-decoration: none;">
+                   📺 Виджет для OBS
+                </a>
+                <a href="https://www.donationalerts.com/" target="_blank" 
+                   style="color: #ffeb3b; text-decoration: none;">
+                   💖 DonationAlerts
+                </a>
+                <a href="https://music.yandex.ru/" target="_blank" 
+                   style="color: #ffeb3b; text-decoration: none;">
+                   🎵 Яндекс.Музыка
+                </a>
+            </div>
         </div>
     </div>
-    
+
+    <script src="script.js"></script>
     <script>
-        // Здесь будет код управления
-        function playNext() {
-            alert('Следующий трек воспроизводится');
-            // Логика для воспроизведения следующего трека
+        // Дополнительные функции для админки
+        function skipCurrent() {
+            playNext();
+            showNotification('Текущий трек пропущен');
         }
         
-        function updateQueue() {
-            // Обновление отображения очереди
+        function clearQueue() {
+            if (confirm('Удалить всю очередь?')) {
+                musicQueue = [];
+                saveToStorage();
+                updateDisplay();
+                showNotification('Очередь очищена');
+            }
         }
         
-        setInterval(updateQueue, 5000);
+        function shuffleQueue() {
+            musicQueue = musicQueue.sort(() => Math.random() - 0.5);
+            updateDisplay();
+            saveToStorage();
+            showNotification('Очередь перемешана');
+        }
+        
+        function importTracks() {
+            const input = document.getElementById('importInput');
+            const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
+            
+            tracks.forEach(trackName => {
+                musicQueue.push({
+                    id: Date.now() + Math.random(),
+                    title: trackName,
+                    artist: 'Неизвестный исполнитель',
+                    donor: 'Импорт',
+                    time: new Date().toLocaleTimeString()
+                });
+            });
+            
+            input.value = '';
+            updateDisplay();
+            saveToStorage();
+            showNotification(`Добавлено ${tracks.length} треков`);
+        }
+        
+        function exportQueue() {
+            const data = JSON.stringify(musicQueue, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'music-queue-' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showNotification('Очередь экспортирована');
+        }
+        
+        function importQueue() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        musicQueue = imported;
+                        updateDisplay();
+                        saveToStorage();
+                        showNotification('Очередь импортирована');
+                    } catch (error) {
+                        alert('Ошибка импорта: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        function resetAll() {
+            if (confirm('Сбросить ВСЕ настройки и очередь?')) {
+                localStorage.clear();
+                musicQueue = [];
+                currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
+                updateDisplay();
+                showNotification('Все настройки сброшены');
+            }
+        }
+        
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('queueCount').textContent = musicQueue.length;
+            document.getElementById('queueCount2').textContent = musicQueue.length;
+            
+            // Получаем общее количество проигранных треков
+            const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
+            document.getElementById('totalPlayed').textContent = totalPlayed;
+            
+            // Считаем донаты (в демо-режиме)
+            const donationsCount = Math.floor(musicQueue.length / 2);
+            document.getElementById('donationsCount').textContent = donationsCount;
+        }
+        
+        // Переопределяем playNext для подсчета статистики
+        const originalPlayNext = window.playNext;
+        window.playNext = function() {
+            const track = originalPlayNext();
+            if (track) {
+                const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
+                localStorage.setItem('totalPlayed', (totalPlayed + 1).toString());
+                updateStats();
+                showNotification(`🎧 Сейчас играет: ${track.title}`);
+            }
+            return track;
+        };
+        
+        // Инициализация админки
+        document.addEventListener('DOMContentLoaded', function() {
+            // Настраиваем кнопку добавления
+            const addTrackBtn = document.getElementById('addTrackBtn');
+            const trackInput = document.getElementById('trackInput');
+            const donorInput = document.getElementById('donorInput');
+            
+            function addTrackAdmin() {
+                const trackName = trackInput.value.trim();
+                if (!trackName) return;
+                
+                const donorName = donorInput.value.trim() || 'Админ';
+                
+                const newTrack = {
+                    id: Date.now(),
+                    title: trackName,
+                    artist: 'Неизвестный исполнитель',
+                    donor: donorName,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                };
+                
+                musicQueue.push(newTrack);
+                updateDisplay();
+                saveToStorage();
+                
+                trackInput.value = '';
+                donorInput.value = '';
+                showNotification(`Трек добавлен от ${donorName}`);
+            }
+            
+            addTrackBtn.addEventListener('click', addTrackAdmin);
+            
+            trackInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTrackAdmin();
+            });
+            
+            donorInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTrackAdmin();
+            });
+            
+            // Обновляем статистику
+            updateStats();
+            setInterval(updateStats, 3000);
+            
+            // Автосохранение настроек
+            const checkboxes = ['autoPlay', 'showDonations', 'soundNotify'];
+            checkboxes.forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb) {
+                    cb.checked = localStorage.getItem(id) !== 'false';
+                    cb.addEventListener('change', function() {
+                        localStorage.setItem(id, this.checked);
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>
