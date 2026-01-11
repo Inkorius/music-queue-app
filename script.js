@@ -143,8 +143,15 @@ async function initDonationAlerts() {
 
 // Периодическая проверка донатов
 function startDonationPolling() {
+    console.log('🔄 Запускаем опрос донатов (каждые 10 секунд)...');
+    
     setInterval(async () => {
-        if (!daAccessToken) return;
+        if (!daAccessToken) {
+            console.log('Нет токена, пропускаем проверку');
+            return;
+        }
+        
+        console.log('🔍 Проверяем новые донаты...');
         
         try {
             const response = await fetch(`${PROXY_URL}?action=get-donations&page=1`, {
@@ -154,7 +161,7 @@ function startDonationPolling() {
             });
             
             if (!response.ok) {
-                console.error('Ошибка API:', response.status);
+                console.error('❌ Ошибка API:', response.status);
                 // Попробуем обновить токен
                 if (response.status === 401) {
                     console.log('Токен истёк, обновляем...');
@@ -164,6 +171,7 @@ function startDonationPolling() {
             }
             
             const data = await response.json();
+            console.log('📊 Получено донатов:', data.data ? data.data.length : 0);
             
             if (data.data && data.data.length > 0) {
                 const latestDonation = data.data[0];
@@ -174,6 +182,8 @@ function startDonationPolling() {
                     localStorage.setItem('lastDonationId', lastDonationId);
                     console.log('🆕 Новый донат:', latestDonation);
                     processDonation(latestDonation);
+                } else {
+                    console.log('Новых донатов нет');
                 }
             }
         } catch (error) {
