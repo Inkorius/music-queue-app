@@ -206,35 +206,15 @@
                 </a>
             </div>
         </div>
-
-        <div class="admin-section">
-    <h2>⚙️ Интеграция с DonationAlerts</h2>
-    <div style="margin-bottom: 20px;">
-        <p style="margin-bottom: 15px; opacity: 0.9;">
-            Вставьте сюда ваш <code>access_token</code>, полученный из API.<br>
-            <small>Токен сохраняется только в вашем браузере и никуда не отправляется.</small>
-        </p>
-        <div class="input-group">
-            <input type="password" 
-                   id="daTokenInput" 
-                   placeholder="Вставьте ваш access_token сюда"
-                   style="flex: 3;">
-            <button class="btn" onclick="saveDaToken()" style="flex: 1;">
-                💾 Сохранить токен
-            </button>
-        </div>
-        <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.7;">
-            <p id="tokenStatus">Токен не сохранён</p>
-            <button class="btn btn-warning" onclick="clearDaToken()" style="padding: 8px 16px; font-size: 0.9em;">
-                🗑️ Удалить токен
-            </button>
-            <button class="btn" onclick="testDaConnection()" style="padding: 8px 16px; font-size: 0.9em; margin-left: 10px;">
-                🔄 Проверить подключение
-            </button>
-        </div>
-    </div>
-        </div>
         
+        <div class="admin-section">
+            <h2>✅ DonationAlerts</h2>
+            <div style="background: rgba(0,255,0,0.1); padding: 15px; border-radius: 10px;">
+                <p><strong>Статус:</strong> <span id="daStatus" style="color: #4caf50;">✅ Работает</span></p>
+                <p><strong>Последняя проверка:</strong> <span id="lastCheckTime">Только что</span></p>
+                <p><strong>Следующая проверка:</strong> через <span id="nextCheckTime">10</span> сек</p>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
@@ -260,7 +240,7 @@
             const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
             
             tracks.forEach(trackName => {
-                musicQueue.push({
+                window.musicQueue.push({
                     id: Date.now() + Math.random(),
                     title: trackName,
                     artist: 'Неизвестный исполнитель',
@@ -270,13 +250,13 @@
             });
             
             input.value = '';
-            updateDisplay();
-            saveToStorage();
+            window.updateDisplay();
+            window.saveQueue(); // Исправлено: saveToStorage → saveQueue
             showNotification(`Добавлено ${tracks.length} треков`);
         }
         
         function exportQueue() {
-            const data = JSON.stringify(musicQueue, null, 2);
+            const data = JSON.stringify(window.musicQueue, null, 2);
             const blob = new Blob([data], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -298,9 +278,9 @@
                 reader.onload = function(e) {
                     try {
                         const imported = JSON.parse(e.target.result);
-                        musicQueue = imported;
-                        updateDisplay();
-                        saveToStorage();
+                        window.musicQueue = imported;
+                        window.updateDisplay();
+                        window.saveQueue(); // Исправлено: saveToStorage → saveQueue
                         showNotification('Очередь импортирована');
                     } catch (error) {
                         alert('Ошибка импорта: ' + error.message);
@@ -314,24 +294,25 @@
         function resetAll() {
             if (confirm('Сбросить ВСЕ настройки и очередь?')) {
                 localStorage.clear();
-                musicQueue = [];
-                currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
-                updateDisplay();
+                window.musicQueue = [];
+                window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
+                window.saveQueue();
+                window.updateDisplay();
                 showNotification('Все настройки сброшены');
             }
         }
         
         // Обновление статистики
         function updateStats() {
-            document.getElementById('queueCount').textContent = musicQueue.length;
-            document.getElementById('queueCount2').textContent = musicQueue.length;
+            document.getElementById('queueCount').textContent = window.musicQueue.length;
+            document.getElementById('queueCount2').textContent = window.musicQueue.length;
             
             // Получаем общее количество проигранных треков
             const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
             document.getElementById('totalPlayed').textContent = totalPlayed;
             
             // Считаем донаты (в демо-режиме)
-            const donationsCount = Math.floor(musicQueue.length / 2);
+            const donationsCount = Math.floor(window.musicQueue.length / 2);
             document.getElementById('donationsCount').textContent = donationsCount;
         }
         
@@ -348,13 +329,7 @@
             return track;
         };
         
-        // Инициализация админки
-        document.addEventListener('DOMContentLoaded', function() {
-            // Настраиваем кнопку добавления
-            const addTrackBtn = document.getElementById('addTrackBtn');
-            const trackInput = document.getElementById('trackInput');
-            const donorInput = document.getElementById('donorInput');
-            
+        // Функция для ручного добавления трека
         function addTrackAdmin() {
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
@@ -371,6 +346,13 @@
                 if (donorInput) donorInput.value = '';
             }
         }
+        
+        // Инициализация админки
+        document.addEventListener('DOMContentLoaded', function() {
+            // Настраиваем кнопку добавления
+            const addTrackBtn = document.getElementById('addTrackBtn');
+            const trackInput = document.getElementById('trackInput');
+            const donorInput = document.getElementById('donorInput');
             
             addTrackBtn.addEventListener('click', addTrackAdmin);
             
@@ -399,103 +381,43 @@
             });
         });
 
-
-        // ========== DonationAlerts Integration ==========
-
-// Сохраняем токен
-function saveDaToken() {
-    const tokenInput = document.getElementById('daTokenInput');
-    const token = tokenInput.value.trim();
+        // Отображение статуса DonationAlerts
+        function updateDAStatus() {
+            // Проверяем, есть ли токен
+            const hasToken = localStorage.getItem('da_access_token');
+            const tokenExpiry = localStorage.getItem('da_token_expiry');
     
-    if (!token) {
-        alert('Введите токен!');
-        return;
-    }
-    
-    // Простая проверка формата (Bearer токены обычно длинные)
-    if (token.length < 50) {
-        if (!confirm('Токен выглядит слишком коротким. Вы уверены, что это правильный access_token?')) {
-            return;
-        }
-    }
-    
-    localStorage.setItem('donationalerts_token', token);
-    updateTokenStatus();
-    tokenInput.value = ''; // Очищаем поле для безопасности
-    showNotification('Токен сохранён!');
-}
-
-// Удаляем токен
-function clearDaToken() {
-    if (confirm('Удалить сохранённый токен?')) {
-        localStorage.removeItem('donationalerts_token');
-        updateTokenStatus();
-        showNotification('Токен удалён');
-    }
-}
-
-// Проверяем подключение
-async function testDaConnection() {
-    const token = localStorage.getItem('donationalerts_token');
-    
-    if (!token) {
-        alert('Сначала сохраните токен!');
-        return;
-    }
-    
-    try {
-        // Используем CORS-прокси для теста
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const apiUrl = 'https://www.donationalerts.com/api/v1/user/oauth';
-        
-        const response = await fetch(proxyUrl + apiUrl, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
+            const statusEl = document.getElementById('daStatus');
+            if (statusEl) {
+                if (hasToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                    statusEl.innerHTML = '✅ Работает (токен активен)';
+                    statusEl.style.color = '#4caf50';
+                } else if (hasToken) {
+                    statusEl.innerHTML = '⚠️ Токен истёк, обновление...';
+                    statusEl.style.color = '#ff9800';
+                } else {
+                    statusEl.innerHTML = '❌ Не подключен';
+                    statusEl.style.color = '#f44336';
+                }
             }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            showNotification(`✅ Подключено! Ваш ID: ${data.data.id}`);
-            console.log('Данные пользователя:', data);
-            return true;
-        } else {
-            showNotification('❌ Ошибка подключения. Проверьте токен.');
-            return false;
+    
+            // Обновляем время последней проверки
+            const lastCheckEl = document.getElementById('lastCheckTime');
+            if (lastCheckEl) {
+                lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            }
+            
+            // Обновляем время до следующей проверки
+            const nextCheckEl = document.getElementById('nextCheckTime');
+            if (nextCheckEl) {
+                // Показываем, что следующая проверка через 10 секунд
+                nextCheckEl.textContent = '10';
+            }
         }
-    } catch (error) {
-        console.error('Ошибка теста:', error);
-        showNotification('❌ Сетевая ошибка. Возможно, CORS-прокси недоступен.');
-        return false;
-    }
-}
 
-// Обновляем статус токена
-function updateTokenStatus() {
-    const statusEl = document.getElementById('tokenStatus');
-    const token = localStorage.getItem('donationalerts_token');
-    
-    if (token) {
-        // Показываем только первые и последние 10 символов для безопасности
-        const maskedToken = token.substring(0, 10) + '...' + token.substring(token.length - 10);
-        statusEl.innerHTML = `Токен сохранён: <code style="background:rgba(255,255,255,0.1);padding:2px 5px;border-radius:3px;">${maskedToken}</code>`;
-        statusEl.style.color = '#4caf50';
-    } else {
-        statusEl.textContent = 'Токен не сохранён';
-        statusEl.style.color = '#f44336';
-    }
-}
-
-// При загрузке админки показываем статус
-document.addEventListener('DOMContentLoaded', function() {
-    updateTokenStatus();
-    
-    // DonationAlerts инициализируется в script.js
-console.log('Admin panel loaded - DonationAlerts handled by main script');
-});
-
-        
+        // Обновляем статус каждые 5 секунд
+        setInterval(updateDAStatus, 5000);
+        updateDAStatus(); // Первый вызов  
     </script>
 </body>
 </html>
