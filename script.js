@@ -155,6 +155,108 @@ function showNotification(message) {
     setTimeout(() => notification.remove(), 3000);
 }
 
+// ========== DonationAlerts Functions ==========
+
+async function checkDonations() {
+    const token = localStorage.getItem('donationalerts_token');
+    
+    if (!token) {
+        console.log('Токен DonationAlerts не найден');
+        return;
+    }
+    
+    try {
+        // Получаем последние донаты (страница 1, 1 элемент)
+        const response = await fetch('https://www.donationalerts.com/api/v1/alerts/donations?page=1', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Ошибка API DonationAlerts:', response.status);
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.data && data.data.length > 0) {
+            // Берем самый последний донат
+            const latestDonation = data.data[0];
+            
+            // Проверяем, не обрабатывали ли мы этот донат уже
+            const lastProcessedId = localStorage.getItem('last_processed_donation_id');
+            
+            if (lastProcessedId !== latestDonation.id.toString()) {
+                // Новый донат! Обрабатываем
+                processNewDonation(latestDonation);
+                localStorage.setItem('last_processed_donation_id', latestDonation.id.toString());
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при проверке донатов:', error);
+    }
+}
+
+function processNewDonation(donation) {
+    console.log('Новый донат:', donation);
+    
+    // Показываем уведомление о донате
+    showNotification(`💖 ${donation.username}: ${donation.amount} ${donation.currency}`);
+    
+    // Проверяем сообщение на команду !музыка
+    if (donation.message) {
+        const messageLower = donation.message.toLowerCase();
+        
+        if (messageLower.includes('!музыка') || messageLower.includes('!song')) {
+            // Извлекаем название трека (убираем команду и лишние пробелы)
+            const trackName = donation.message
+                .replace(/!(музыка|song)\s*/i, '')
+                .trim();
+            
+            if (trackName) {
+                // Добавляем трек в очередь
+                addTrack(
+                    trackName,
+                    'Исполнитель неизвестен',
+                    `${donation.username} (${donation.amount}${donation.currency})`
+                );
+                
+                // Дополнительное уведомление
+                showNotification(`🎵 ${donation.username} заказал: ${trackName}`);
+            }
+        }
+    }
+    
+    // Добавляем донат в историю (необязательно)
+    addToDonationHistory(donation);
+}
+
+function addToDonationHistory(donation) {
+    let history = JSON.parse(localStorage.getItem('donation_history') || '[]');
+    
+    // Добавляем новый донат в начало
+    history.unshift({
+        username: donation.username,
+        amount: donation.amount,
+        currency: donation.currency,
+        message: donation.message || '',
+        time: new Date().toLocaleTimeString(),
+        date: new Date().toLocaleDateString()
+    });
+    
+    // Ограничиваем историю последними 50 донатами
+    if (history.length > 50) {
+        history = history.slice(0, 50);
+    }
+    
+    localStorage.setItem('donation_history', JSON.stringify(history));
+}
+
+// Запускаем проверку донатов каждые 30 секунд
+setInterval(checkDonations, 30000);
+
 // Стили для уведомлений
 const style = document.createElement('style');
 style.textContent = `
