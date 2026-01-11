@@ -506,11 +506,8 @@ function updateTokenStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     updateTokenStatus();
     
-    // Автоматически проверяем донаты каждые 30 секунд, если токен есть
-    const token = localStorage.getItem('donationalerts_token');
-    if (token) {
-        setTimeout(checkDonations, 5000); // Первая проверка через 5 секунд
-    }
+    // DonationAlerts инициализируется в script.js
+console.log('Admin panel loaded - DonationAlerts handled by main script');
 });
 
         
