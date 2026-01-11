@@ -1,233 +1,137 @@
-let musicQueue = [];
-let currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
-let donations = [];
+// Единое хранилище в localStorage
+let musicQueue = JSON.parse(localStorage.getItem('musicQueue')) || [];
+let currentTrack = JSON.parse(localStorage.getItem('currentTrack')) || {
+    title: "Нет трека", 
+    artist: "Добавьте первый трек!"
+};
 
-// DOM элементы
-const addTrackBtn = document.getElementById('addTrackBtn');
-const trackInput = document.getElementById('trackInput');
+// Функция для сохранения
+function saveQueue() {
+    localStorage.setItem('musicQueue', JSON.stringify(musicQueue));
+    localStorage.setItem('currentTrack', JSON.stringify(currentTrack));
+}
 
-// Добавление трека (для админки)
-function addTrack() {
-    if (!trackInput) return;
+// Функция для обновления отображения
+function updateDisplay() {
+    // Обновляем на главной странице
+    const currentTrackEl = document.getElementById('currentTrack');
+    const currentArtistEl = document.getElementById('currentArtist');
+    const queueListEl = document.getElementById('queueList');
     
-    const trackName = trackInput.value.trim();
-    if (!trackName) return;
+    if (currentTrackEl) {
+        currentTrackEl.textContent = currentTrack.title;
+        currentArtistEl.textContent = currentTrack.artist;
+    }
     
+    if (queueListEl) {
+        if (musicQueue.length === 0) {
+            queueListEl.innerHTML = '<p class="empty-queue">Очередь пуста. Будь первым!</p>';
+        } else {
+            let html = '';
+            musicQueue.forEach((track, index) => {
+                html += `
+                    <div class="queue-item">
+                        <div class="queue-number">#${index + 1}</div>
+                        <div class="track-info">
+                            <div class="track-title">${track.title}</div>
+                            <div class="track-artist">${track.artist}</div>
+                        </div>
+                        <div class="donor-name">${track.donor}</div>
+                    </div>
+                `;
+            });
+            queueListEl.innerHTML = html;
+        }
+    }
+    
+    // Обновляем в админке
+    const adminQueueList = document.getElementById('adminQueueList');
+    if (adminQueueList) {
+        adminQueueList.innerHTML = queueListEl ? queueListEl.innerHTML : '';
+    }
+}
+
+// Добавление трека
+function addTrack(title, artist = 'Неизвестный исполнитель', donor = 'Админ') {
     const newTrack = {
         id: Date.now(),
-        title: trackName,
-        artist: "Неизвестный исполнитель",
-        donor: "Админ",
+        title: title,
+        artist: artist,
+        donor: donor,
         time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
     };
     
     musicQueue.push(newTrack);
+    saveQueue();
     updateDisplay();
-    trackInput.value = '';
     
-    // Сохраняем в localStorage
-    saveToStorage();
+    // Уведомление
+    showNotification(`🎵 ${donor} добавил: ${title}`);
+    
+    return newTrack;
 }
 
 // Удаление трека
 function removeTrack(trackId) {
     musicQueue = musicQueue.filter(track => track.id !== trackId);
+    saveQueue();
     updateDisplay();
-    saveToStorage();
 }
 
 // Следующий трек
 function playNext() {
     if (musicQueue.length > 0) {
         currentTrack = musicQueue.shift();
+        saveQueue();
         updateDisplay();
-        saveToStorage();
+        showNotification(`▶️ Сейчас играет: ${currentTrack.title}`);
         return currentTrack;
-    }
-    return null;
-}
-
-// Сохранение в localStorage
-function saveToStorage() {
-    try {
-        localStorage.setItem('musicQueue', JSON.stringify(musicQueue));
-        localStorage.setItem('currentTrack', JSON.stringify(currentTrack));
-    } catch (e) {
-        console.log('Ошибка сохранения:', e);
-    }
-}
-
-// Загрузка из localStorage
-function loadFromStorage() {
-    try {
-        const savedQueue = localStorage.getItem('musicQueue');
-        const savedCurrent = localStorage.getItem('currentTrack');
-        
-        if (savedQueue) musicQueue = JSON.parse(savedQueue);
-        if (savedCurrent) currentTrack = JSON.parse(savedCurrent);
-    } catch (e) {
-        console.log('Ошибка загрузки:', e);
-    }
-}
-
-// Обновление отображения
-function updateDisplay() {
-    // Текущий трек
-    document.getElementById('currentTrack').textContent = currentTrack.title;
-    document.getElementById('currentArtist').textContent = currentTrack.artist;
-    
-    // Очередь
-    const queueList = document.getElementById('queueList');
-    if (musicQueue.length === 0) {
-        queueList.innerHTML = '<p>Очередь пуста. Будь первым!</p>';
     } else {
-        let html = '';
-        musicQueue.forEach((track, index) => {
-            html += `
-                <div class="queue-item" data-id="${track.id}">
-                    <span class="queue-number">#${index + 1}</span>
-                    <div class="track-info">
-                        <strong>${track.title}</strong>
-                        <div class="track-meta">
-                            <span>${track.artist}</span>
-                            <span class="donor">👤 ${track.donor}</span>
-                            <span class="time">🕐 ${track.time}</span>
-                        </div>
-                    </div>
-                    <button class="remove-btn" onclick="removeTrack(${track.id})">×</button>
-                </div>
-            `;
-        });
-        queueList.innerHTML = html;
-    }
-    
-    // Для панели управления
-    const adminQueueList = document.getElementById('adminQueueList');
-    if (adminQueueList) {
-        adminQueueList.innerHTML = queueList.innerHTML;
+        showNotification('🎵 Очередь пуста');
+        return null;
     }
 }
-
-// Добавляем стили для новых элементов
-const style = document.createElement('style');
-style.textContent = `
-    .queue-item {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        transition: background 0.3s;
-    }
-    
-    .queue-item:hover {
-        background: rgba(255, 255, 255, 0.15);
-    }
-    
-    .queue-number {
-        background: #667eea;
-        color: white;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 10px;
-        font-weight: bold;
-    }
-    
-    .track-info {
-        flex: 1;
-    }
-    
-    .track-meta {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.7);
-        margin-top: 4px;
-        display: flex;
-        gap: 10px;
-    }
-    
-    .donor {
-        color: #ffeb3b;
-    }
-    
-    .time {
-        color: #4caf50;
-    }
-    
-    .remove-btn {
-        background: rgba(244, 67, 54, 0.3);
-        color: white;
-        border: none;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 18px;
-        transition: background 0.3s;
-    }
-    
-    .remove-btn:hover {
-        background: rgba(244, 67, 54, 0.6);
-    }
-`;
-document.head.appendChild(style);
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
-    loadFromStorage();
+    // Загружаем данные
+    const savedQueue = localStorage.getItem('musicQueue');
+    const savedCurrent = localStorage.getItem('currentTrack');
+    
+    if (savedQueue) musicQueue = JSON.parse(savedQueue);
+    if (savedCurrent) currentTrack = JSON.parse(savedCurrent);
+    
     updateDisplay();
     
-    // Для админки
-    if (addTrackBtn) {
-        addTrackBtn.addEventListener('click', addTrack);
-    }
-    
-    if (trackInput) {
-        trackInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addTrack();
-        });
-    }
-    
-    // Автообновление каждые 5 секунд
-    setInterval(updateDisplay, 5000);
+    // Обновляем каждые 2 секунды
+    setInterval(updateDisplay, 2000);
 });
 
-// Глобальные функции для кнопок
-window.removeTrack = removeTrack;
-window.playNext = playNext;
-
-// Имитация донатов (только для демо)
-function simulateDonation() {
-    const donors = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Сергей'];
-    const tracks = [
-        {title: 'Shape of You', artist: 'Ed Sheeran'},
-        {title: 'Blinding Lights', artist: 'The Weeknd'},
-        {title: 'Bad Guy', artist: 'Billie Eilish'},
-        {title: 'Dance Monkey', artist: 'Tones and I'},
-        {title: 'Bohemian Rhapsody', artist: 'Queen'}
-    ];
-    
-    const randomDonor = donors[Math.floor(Math.random() * donors.length)];
-    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-    
-    const newTrack = {
-        id: Date.now(),
-        title: randomTrack.title,
-        artist: randomTrack.artist,
-        donor: randomDonor,
-        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-    };
-    
-    musicQueue.push(newTrack);
-    updateDisplay();
-    saveToStorage();
-    
-    // Показываем уведомление
-    showNotification(`🎵 ${randomDonor} заказал: ${randomTrack.title}`);
+// Для админки
+if (window.location.pathname.includes('admin.html')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        const trackInput = document.getElementById('trackInput');
+        const donorInput = document.getElementById('donorInput');
+        const addBtn = document.getElementById('addTrackBtn');
+        
+        function addTrackFromAdmin() {
+            const title = trackInput.value.trim();
+            const donor = donorInput.value.trim() || 'Админ';
+            
+            if (title) {
+                addTrack(title, 'Исполнитель неизвестен', donor);
+                trackInput.value = '';
+                donorInput.value = '';
+            }
+        }
+        
+        if (addBtn) addBtn.addEventListener('click', addTrackFromAdmin);
+        if (trackInput) {
+            trackInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTrackFromAdmin();
+            });
+        }
+    });
 }
 
 // Уведомления
@@ -247,22 +151,20 @@ function showNotification(message) {
         z-index: 1000;
     `;
     
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
-    
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
 }
 
-// Для демо: имитация доната каждые 30 секунд
-setInterval(simulateDonation, 30000);
+// Стили для уведомлений
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
