@@ -6,7 +6,7 @@ let currentTrack = JSON.parse(localStorage.getItem('currentTrack')) || {
 };
 
 // DonationAlerts
-const PROXY_URL = 'https://music-queue-dkt871bdw-evgeniis-projects-09062643.vercel.app/api/donation-proxy'; // ЗАМЕНИТЕ НА ВАШ VERCEL URL
+const PROXY_URL = 'https://music-queue-app.vercel.app/api/donation-proxy';
 let daAccessToken = null;
 let lastDonationId = localStorage.getItem('lastDonationId') || null;
 
@@ -115,6 +115,7 @@ async function initDonationAlerts() {
         
         if (!tokenResponse.ok) {
             console.error('Ошибка получения токена:', tokenResponse.status);
+            showNotification('❌ Ошибка получения токена');
             return false;
         }
         
@@ -125,15 +126,17 @@ async function initDonationAlerts() {
             localStorage.setItem('da_access_token', daAccessToken);
             localStorage.setItem('da_token_expiry', Date.now() + (tokenData.expires_in * 1000));
             
-            console.log('✅ DonationAlerts токен получен');
+            console.log('✅ DonationAlerts токен получен:', daAccessToken.substring(0, 20) + '...');
             showNotification('✅ DonationAlerts подключён');
             return true;
         } else {
             console.error('Токен не получен:', tokenData);
+            showNotification('❌ Токен не получен');
             return false;
         }
     } catch (error) {
         console.error('Ошибка инициализации DonationAlerts:', error);
+        showNotification('❌ Ошибка подключения к DonationAlerts');
         return false;
     }
 }
@@ -154,6 +157,7 @@ function startDonationPolling() {
                 console.error('Ошибка API:', response.status);
                 // Попробуем обновить токен
                 if (response.status === 401) {
+                    console.log('Токен истёк, обновляем...');
                     await initDonationAlerts();
                 }
                 return;
@@ -168,6 +172,7 @@ function startDonationPolling() {
                 if (latestDonation.id.toString() !== lastDonationId) {
                     lastDonationId = latestDonation.id.toString();
                     localStorage.setItem('lastDonationId', lastDonationId);
+                    console.log('🆕 Новый донат:', latestDonation);
                     processDonation(latestDonation);
                 }
             }
@@ -179,8 +184,6 @@ function startDonationPolling() {
 
 // Обработка доната
 function processDonation(donation) {
-    console.log('Новый донат:', donation);
-    
     // Показываем уведомление
     showNotification(`💖 ${donation.username}: ${donation.amount} ${donation.currency}`);
     
@@ -458,13 +461,16 @@ document.addEventListener('DOMContentLoaded', function() {
         daAccessToken = savedToken;
         startDonationPolling();
         console.log('✅ Используем сохранённый токен DonationAlerts');
+        showNotification('✅ DonationAlerts подключён');
     } else {
         console.log('🔄 Получаем новый токен DonationAlerts...');
+        showNotification('🔄 Подключаемся к DonationAlerts...');
         initDonationAlerts().then(success => {
             if (success) {
                 startDonationPolling();
             } else {
                 console.log('Не удалось подключиться к DonationAlerts');
+                showNotification('❌ Не удалось подключиться к DonationAlerts');
             }
         });
     }
