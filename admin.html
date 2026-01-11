@@ -459,7 +459,11 @@ async function testDaConnection() {
     }
     
     try {
-        const response = await fetch('https://www.donationalerts.com/api/v1/user/oauth', {
+        // Используем CORS-прокси для теста
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const apiUrl = 'https://www.donationalerts.com/api/v1/user/oauth';
+        
+        const response = await fetch(proxyUrl + apiUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'
@@ -470,12 +474,15 @@ async function testDaConnection() {
             const data = await response.json();
             showNotification(`✅ Подключено! Ваш ID: ${data.data.id}`);
             console.log('Данные пользователя:', data);
+            return true;
         } else {
             showNotification('❌ Ошибка подключения. Проверьте токен.');
+            return false;
         }
     } catch (error) {
         console.error('Ошибка теста:', error);
-        showNotification('❌ Сетевая ошибка');
+        showNotification('❌ Сетевая ошибка. Возможно, CORS-прокси недоступен.');
+        return false;
     }
 }
 
