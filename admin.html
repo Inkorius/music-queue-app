@@ -256,7 +256,8 @@
         }
         
         function exportQueue() {
-            const data = JSON.stringify(window.musicQueue, null, 2);
+            const queue = window.musicQueue || [];
+            const data = JSON.stringify(queue, null, 2);
             const blob = new Blob([data], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -302,17 +303,20 @@
             }
         }
         
-        // Обновление статистики
+                // Обновление статистики
         function updateStats() {
-            document.getElementById('queueCount').textContent = window.musicQueue.length;
-            document.getElementById('queueCount2').textContent = window.musicQueue.length;
-            
+            // Безопасное получение длины очереди
+            const queueLength = (window.musicQueue || []).length;
+    
+            document.getElementById('queueCount').textContent = queueLength;
+            document.getElementById('queueCount2').textContent = queueLength;
+    
             // Получаем общее количество проигранных треков
             const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
             document.getElementById('totalPlayed').textContent = totalPlayed;
-            
+    
             // Считаем донаты (в демо-режиме)
-            const donationsCount = Math.floor(window.musicQueue.length / 2);
+            const donationsCount = Math.floor(queueLength / 2);
             document.getElementById('donationsCount').textContent = donationsCount;
         }
         
