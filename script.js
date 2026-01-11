@@ -6,7 +6,7 @@ let currentTrack = JSON.parse(localStorage.getItem('currentTrack')) || {
 };
 
 // DonationAlerts
-const PROXY_URL = 'https://ваш-проект.vercel.app/api/donation-proxy'; // ЗАМЕНИТЕ НА ВАШ VERCEL URL
+const PROXY_URL = 'https://music-queue-dkt871bdw-evgeniis-projects-09062643.vercel.app/api/donation-proxy'; // ЗАМЕНИТЕ НА ВАШ VERCEL URL
 let daAccessToken = null;
 let lastDonationId = localStorage.getItem('lastDonationId') || null;
 
