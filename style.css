@@ -184,3 +184,37 @@ footer a:hover {
 .widget-mode .track-meta {
     font-size: 11px;
 }
+
+.recent-donations {
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid gold;
+}
+
+.donation-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid #4caf50;
+}
+
+.donation-amount {
+    color: gold;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.donation-message {
+    font-style: italic;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+.donation-time {
+    font-size: 0.8em;
+    opacity: 0.6;
+    text-align: right;
+}
