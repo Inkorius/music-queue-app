@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель управления - Музыка на стрим</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        #queue {
+            margin-top: 20px;
+        }
+        
+        .queue-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Панель управления музыкой</h1>
+        
+        <div class="controls">
+            <h3>Управление очередью</h3>
+            <button onclick="playNext()">▶ Следующий трек</button>
+            <button onclick="skipTrack()">⏭ Пропустить</button>
+            <button onclick="clearQueue()">🗑 Очистить очередь</button>
+        </div>
+        
+        <div id="queue">
+            <h3>Текущая очередь</h3>
+            <div id="queueList"></div>
+        </div>
+        
+        <div>
+            <h3>Ручное добавление трека</h3>
+            <input type="text" id="trackInput" placeholder="Название трека">
+            <button onclick="addTrack()">Добавить</button>
+        </div>
+    </div>
+    
+    <script>
+        // Здесь будет код управления
+        function playNext() {
+            alert('Следующий трек воспроизводится');
+            // Логика для воспроизведения следующего трека
+        }
+        
+        function updateQueue() {
+            // Обновление отображения очереди
+        }
+        
+        setInterval(updateQueue, 5000);
+    </script>
+</body>
+</html>
