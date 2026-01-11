@@ -1,54 +1,21 @@
-// Единое хранилище в localStorage
+// ========== Глобальные переменные ==========
 let musicQueue = JSON.parse(localStorage.getItem('musicQueue')) || [];
 let currentTrack = JSON.parse(localStorage.getItem('currentTrack')) || {
     title: "Нет трека", 
     artist: "Добавьте первый трек!"
 };
 
-// Функция для сохранения
+// DonationAlerts
+const PROXY_URL = 'https://ваш-проект.vercel.app/api/donation-proxy'; // ЗАМЕНИТЕ НА ВАШ VERCEL URL
+let daAccessToken = null;
+let lastDonationId = localStorage.getItem('lastDonationId') || null;
+
+// ========== Основные функции очереди ==========
+
+// Сохранение в localStorage
 function saveQueue() {
     localStorage.setItem('musicQueue', JSON.stringify(musicQueue));
     localStorage.setItem('currentTrack', JSON.stringify(currentTrack));
-}
-
-// Функция для обновления отображения
-function updateDisplay() {
-    // Обновляем на главной странице
-    const currentTrackEl = document.getElementById('currentTrack');
-    const currentArtistEl = document.getElementById('currentArtist');
-    const queueListEl = document.getElementById('queueList');
-    
-    if (currentTrackEl) {
-        currentTrackEl.textContent = currentTrack.title;
-        currentArtistEl.textContent = currentTrack.artist;
-    }
-    
-    if (queueListEl) {
-        if (musicQueue.length === 0) {
-            queueListEl.innerHTML = '<p class="empty-queue">Очередь пуста. Будь первым!</p>';
-        } else {
-            let html = '';
-            musicQueue.forEach((track, index) => {
-                html += `
-                    <div class="queue-item">
-                        <div class="queue-number">#${index + 1}</div>
-                        <div class="track-info">
-                            <div class="track-title">${track.title}</div>
-                            <div class="track-artist">${track.artist}</div>
-                        </div>
-                        <div class="donor-name">${track.donor}</div>
-                    </div>
-                `;
-            });
-            queueListEl.innerHTML = html;
-        }
-    }
-    
-    // Обновляем в админке
-    const adminQueueList = document.getElementById('adminQueueList');
-    if (adminQueueList) {
-        adminQueueList.innerHTML = queueListEl ? queueListEl.innerHTML : '';
-    }
 }
 
 // Добавление трека
@@ -65,7 +32,6 @@ function addTrack(title, artist = 'Неизвестный исполнитель
     saveQueue();
     updateDisplay();
     
-    // Уведомление
     showNotification(`🎵 ${donor} добавил: ${title}`);
     
     return newTrack;
@@ -92,152 +58,165 @@ function playNext() {
     }
 }
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', function() {
-    // Загружаем данные
-    const savedQueue = localStorage.getItem('musicQueue');
-    const savedCurrent = localStorage.getItem('currentTrack');
+// Обновление отображения
+function updateDisplay() {
+    // Текущий трек
+    const currentTrackEl = document.getElementById('currentTrack');
+    const currentArtistEl = document.getElementById('currentArtist');
     
-    if (savedQueue) musicQueue = JSON.parse(savedQueue);
-    if (savedCurrent) currentTrack = JSON.parse(savedCurrent);
-    
-    updateDisplay();
-    
-    // Обновляем каждые 2 секунды
-    setInterval(updateDisplay, 2000);
-});
-
-// Для админки
-if (window.location.pathname.includes('admin.html')) {
-    document.addEventListener('DOMContentLoaded', function() {
-        const trackInput = document.getElementById('trackInput');
-        const donorInput = document.getElementById('donorInput');
-        const addBtn = document.getElementById('addTrackBtn');
-        
-        function addTrackFromAdmin() {
-            const title = trackInput.value.trim();
-            const donor = donorInput.value.trim() || 'Админ';
-            
-            if (title) {
-                addTrack(title, 'Исполнитель неизвестен', donor);
-                trackInput.value = '';
-                donorInput.value = '';
-            }
-        }
-        
-        if (addBtn) addBtn.addEventListener('click', addTrackFromAdmin);
-        if (trackInput) {
-            trackInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') addTrackFromAdmin();
-            });
-        }
-    });
-}
-
-// Уведомления
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        animation: slideIn 0.5s, fadeOut 0.5s 2.5s;
-        z-index: 1000;
-    `;
-    
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-}
-
-// ========== DonationAlerts Functions ==========
-
-async function checkDonations() {
-    const token = localStorage.getItem('donationalerts_token');
-    
-    if (!token) {
-        console.log('Токен DonationAlerts не найден');
-        return;
+    if (currentTrackEl) {
+        currentTrackEl.textContent = currentTrack.title;
+    }
+    if (currentArtistEl) {
+        currentArtistEl.textContent = currentTrack.artist;
     }
     
+    // Очередь
+    const queueListEl = document.getElementById('queueList');
+    if (queueListEl) {
+        if (musicQueue.length === 0) {
+            queueListEl.innerHTML = '<p class="empty-queue">Очередь пуста. Будь первым!</p>';
+        } else {
+            let html = '';
+            musicQueue.forEach((track, index) => {
+                html += `
+                    <div class="queue-item" data-id="${track.id}">
+                        <div class="queue-number">#${index + 1}</div>
+                        <div class="track-info">
+                            <div class="track-title">${track.title}</div>
+                            <div class="track-artist">${track.artist}</div>
+                            <div class="track-meta">
+                                <span class="donor">👤 ${track.donor}</span>
+                                <span class="time">🕐 ${track.time}</span>
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeTrack(${track.id})">×</button>
+                    </div>
+                `;
+            });
+            queueListEl.innerHTML = html;
+        }
+    }
+    
+    // Для админки
+    const adminQueueList = document.getElementById('adminQueueList');
+    if (adminQueueList) {
+        adminQueueList.innerHTML = queueListEl ? queueListEl.innerHTML : '';
+    }
+}
+
+// ========== DonationAlerts Integration ==========
+
+// Инициализация DonationAlerts
+async function initDonationAlerts() {
     try {
-        // Получаем последние донаты (страница 1, 1 элемент)
-        const response = await fetch('https://www.donationalerts.com/api/v1/alerts/donations?page=1', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
-        });
+        // Получаем новый токен через прокси
+        const tokenResponse = await fetch(`${PROXY_URL}?action=get-token`);
         
-        if (!response.ok) {
-            console.error('Ошибка API DonationAlerts:', response.status);
-            return;
+        if (!tokenResponse.ok) {
+            console.error('Ошибка получения токена:', tokenResponse.status);
+            return false;
         }
         
-        const data = await response.json();
+        const tokenData = await tokenResponse.json();
         
-        if (data.data && data.data.length > 0) {
-            // Берем самый последний донат
-            const latestDonation = data.data[0];
+        if (tokenData.access_token) {
+            daAccessToken = tokenData.access_token;
+            localStorage.setItem('da_access_token', daAccessToken);
+            localStorage.setItem('da_token_expiry', Date.now() + (tokenData.expires_in * 1000));
             
-            // Проверяем, не обрабатывали ли мы этот донат уже
-            const lastProcessedId = localStorage.getItem('last_processed_donation_id');
-            
-            if (lastProcessedId !== latestDonation.id.toString()) {
-                // Новый донат! Обрабатываем
-                processNewDonation(latestDonation);
-                localStorage.setItem('last_processed_donation_id', latestDonation.id.toString());
-            }
+            console.log('✅ DonationAlerts токен получен');
+            showNotification('✅ DonationAlerts подключён');
+            return true;
+        } else {
+            console.error('Токен не получен:', tokenData);
+            return false;
         }
     } catch (error) {
-        console.error('Ошибка при проверке донатов:', error);
+        console.error('Ошибка инициализации DonationAlerts:', error);
+        return false;
     }
 }
 
-function processNewDonation(donation) {
+// Периодическая проверка донатов
+function startDonationPolling() {
+    setInterval(async () => {
+        if (!daAccessToken) return;
+        
+        try {
+            const response = await fetch(`${PROXY_URL}?action=get-donations&page=1`, {
+                headers: {
+                    'X-Access-Token': daAccessToken
+                }
+            });
+            
+            if (!response.ok) {
+                console.error('Ошибка API:', response.status);
+                // Попробуем обновить токен
+                if (response.status === 401) {
+                    await initDonationAlerts();
+                }
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.data && data.data.length > 0) {
+                const latestDonation = data.data[0];
+                
+                // Проверяем, новый ли это донат
+                if (latestDonation.id.toString() !== lastDonationId) {
+                    lastDonationId = latestDonation.id.toString();
+                    localStorage.setItem('lastDonationId', lastDonationId);
+                    processDonation(latestDonation);
+                }
+            }
+        } catch (error) {
+            console.log('Ошибка проверки донатов:', error);
+        }
+    }, 10000); // Проверяем каждые 10 секунд
+}
+
+// Обработка доната
+function processDonation(donation) {
     console.log('Новый донат:', donation);
     
-    // Показываем уведомление о донате
+    // Показываем уведомление
     showNotification(`💖 ${donation.username}: ${donation.amount} ${donation.currency}`);
     
-    // Проверяем сообщение на команду !музыка
+    // Добавляем в историю донатов
+    addToDonationHistory(donation);
+    
+    // Проверяем команду !музыка
     if (donation.message) {
-        const messageLower = donation.message.toLowerCase();
+        const message = donation.message.toLowerCase();
         
-        if (messageLower.includes('!музыка') || messageLower.includes('!song')) {
-            // Извлекаем название трека (убираем команду и лишние пробелы)
-            const trackName = donation.message
+        if (message.includes('!музыка') || message.includes('!song')) {
+            const trackQuery = donation.message
                 .replace(/!(музыка|song)\s*/i, '')
                 .trim();
             
-            if (trackName) {
+            if (trackQuery) {
                 // Добавляем трек в очередь
                 addTrack(
-                    trackName,
+                    trackQuery,
                     'Исполнитель неизвестен',
                     `${donation.username} (${donation.amount}${donation.currency})`
                 );
                 
-                // Дополнительное уведомление
-                showNotification(`🎵 ${donation.username} заказал: ${trackName}`);
+                // Уведомление о добавлении трека
+                showNotification(`🎵 ${donation.username} заказал: ${trackQuery}`);
             }
         }
     }
-    
-    // Добавляем донат в историю (необязательно)
-    addToDonationHistory(donation);
 }
 
+// История донатов
 function addToDonationHistory(donation) {
     let history = JSON.parse(localStorage.getItem('donation_history') || '[]');
     
-    // Добавляем новый донат в начало
     history.unshift({
+        id: donation.id,
         username: donation.username,
         amount: donation.amount,
         currency: donation.currency,
@@ -246,32 +225,17 @@ function addToDonationHistory(donation) {
         date: new Date().toLocaleDateString()
     });
     
-    // Ограничиваем историю последними 50 донатами
+    // Ограничиваем 50 последними донатами
     if (history.length > 50) {
         history = history.slice(0, 50);
     }
     
     localStorage.setItem('donation_history', JSON.stringify(history));
+    updateDonationDisplay();
 }
 
-// Запускаем проверку донатов каждые 30 секунд
-setInterval(checkDonations, 30000);
-
-// Стили для уведомлений
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
-function displayDonationHistory() {
+// Обновление отображения донатов
+function updateDonationDisplay() {
     const history = JSON.parse(localStorage.getItem('donation_history') || '[]');
     const container = document.getElementById('donationsList');
     
@@ -283,15 +247,15 @@ function displayDonationHistory() {
     }
     
     let html = '';
-    history.slice(0, 5).forEach(donation => { // Показываем последние 5
+    history.slice(0, 10).forEach(donation => {
         html += `
             <div class="donation-item">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="donation-header">
                     <strong>${donation.username}</strong>
                     <span class="donation-amount">${donation.amount} ${donation.currency}</span>
                 </div>
                 ${donation.message ? `<div class="donation-message">${donation.message}</div>` : ''}
-                <div class="donation-time">${donation.time}</div>
+                <div class="donation-time">${donation.time} ${donation.date}</div>
             </div>
         `;
     });
@@ -299,8 +263,239 @@ function displayDonationHistory() {
     container.innerHTML = html;
 }
 
-// Обновляем отображение донатов при загрузке и периодически
+// Автоматическое обновление токена при истечении
+function checkTokenExpiry() {
+    const expiry = localStorage.getItem('da_token_expiry');
+    if (expiry && Date.now() > parseInt(expiry)) {
+        console.log('Токен истёк, обновляем...');
+        initDonationAlerts();
+    }
+}
+
+// ========== Уведомления ==========
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        animation: slideIn 0.5s, fadeOut 0.5s 2.5s;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        border-left: 4px solid #4caf50;
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// ========== Стили для уведомлений ==========
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    
+    .queue-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        transition: background 0.3s;
+        border-left: 3px solid #667eea;
+    }
+    
+    .queue-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .queue-number {
+        background: #667eea;
+        color: white;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    
+    .track-info {
+        flex: 1;
+    }
+    
+    .track-title {
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+    
+    .track-artist {
+        opacity: 0.8;
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+    
+    .track-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        opacity: 0.7;
+    }
+    
+    .donor {
+        color: #ffeb3b;
+    }
+    
+    .time {
+        color: #4caf50;
+    }
+    
+    .remove-btn {
+        background: rgba(244, 67, 54, 0.2);
+        color: white;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 20px;
+        transition: background 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 10px;
+    }
+    
+    .remove-btn:hover {
+        background: rgba(244, 67, 54, 0.6);
+    }
+    
+    .empty-queue {
+        text-align: center;
+        padding: 30px;
+        opacity: 0.5;
+        font-style: italic;
+    }
+    
+    .donation-item {
+        background: rgba(255, 215, 0, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 3px solid gold;
+    }
+    
+    .donation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .donation-amount {
+        color: gold;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    
+    .donation-message {
+        font-style: italic;
+        opacity: 0.9;
+        margin: 8px 0;
+        padding: 5px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 4px;
+    }
+    
+    .donation-time {
+        font-size: 0.8em;
+        opacity: 0.6;
+        text-align: right;
+    }
+`;
+document.head.appendChild(style);
+
+// ========== Инициализация ==========
+
 document.addEventListener('DOMContentLoaded', function() {
-    displayDonationHistory();
-    setInterval(displayDonationHistory, 10000); // Обновляем каждые 10 секунд
+    // Загружаем очередь
+    const savedQueue = localStorage.getItem('musicQueue');
+    const savedCurrent = localStorage.getItem('currentTrack');
+    
+    if (savedQueue) musicQueue = JSON.parse(savedQueue);
+    if (savedCurrent) currentTrack = JSON.parse(savedCurrent);
+    
+    // Обновляем отображение
+    updateDisplay();
+    updateDonationDisplay();
+    
+    // Инициализация DonationAlerts
+    const savedToken = localStorage.getItem('da_access_token');
+    const savedExpiry = localStorage.getItem('da_token_expiry');
+    
+    if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry)) {
+        daAccessToken = savedToken;
+        startDonationPolling();
+        console.log('✅ Используем сохранённый токен DonationAlerts');
+    } else {
+        console.log('🔄 Получаем новый токен DonationAlerts...');
+        initDonationAlerts().then(success => {
+            if (success) {
+                startDonationPolling();
+            } else {
+                console.log('Не удалось подключиться к DonationAlerts');
+            }
+        });
+    }
+    
+    // Проверяем истечение токена каждые 30 секунд
+    setInterval(checkTokenExpiry, 30000);
+    
+    // Обновляем отображение каждые 3 секунды
+    setInterval(updateDisplay, 3000);
+    setInterval(updateDonationDisplay, 5000);
 });
+
+// ========== Глобальные функции для кнопок ==========
+
+// Для использования в onclick атрибутах
+window.removeTrack = removeTrack;
+window.playNext = playNext;
+
+// Функция для админки
+window.addTrackAdmin = function() {
+    const trackInput = document.getElementById('trackInput');
+    const donorInput = document.getElementById('donorInput');
+    
+    if (!trackInput) return;
+    
+    const title = trackInput.value.trim();
+    const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
+    
+    if (title) {
+        addTrack(title, 'Исполнитель неизвестен', donor);
+        trackInput.value = '';
+        if (donorInput) donorInput.value = '';
+    }
+};
