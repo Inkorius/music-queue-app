@@ -141,9 +141,6 @@
                 <button class="btn btn-danger" onclick="clearQueue()">
                     🗑 Очистить всю очередь
                 </button>
-                <button class="btn" onclick="shuffleQueue()">
-                    🔀 Перемешать очередь
-                </button>
             </div>
         </div>
         
@@ -250,18 +247,12 @@
         
         function clearQueue() {
             if (confirm('Удалить всю очередь?')) {
-                musicQueue = [];
-                saveToStorage();
-                updateDisplay();
+                // Используем глобальные функции из script.js
+                window.musicQueue = [];
+                window.saveQueue();
+                window.updateDisplay();
                 showNotification('Очередь очищена');
             }
-        }
-        
-        function shuffleQueue() {
-            musicQueue = musicQueue.sort(() => Math.random() - 0.5);
-            updateDisplay();
-            saveToStorage();
-            showNotification('Очередь перемешана');
         }
         
         function importTracks() {
@@ -364,28 +355,22 @@
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
             
-            function addTrackAdmin() {
-                const trackName = trackInput.value.trim();
-                if (!trackName) return;
-                
-                const donorName = donorInput.value.trim() || 'Админ';
-                
-                const newTrack = {
-                    id: Date.now(),
-                    title: trackName,
-                    artist: 'Неизвестный исполнитель',
-                    donor: donorName,
-                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                };
-                
-                musicQueue.push(newTrack);
-                updateDisplay();
-                saveToStorage();
-                
+        function addTrackAdmin() {
+            const trackInput = document.getElementById('trackInput');
+            const donorInput = document.getElementById('donorInput');
+    
+            if (!trackInput) return;
+    
+            const title = trackInput.value.trim();
+            const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
+    
+            if (title) {
+                // Используем глобальную функцию addTrack из script.js
+                addTrack(title, 'Исполнитель неизвестен', donor);
                 trackInput.value = '';
-                donorInput.value = '';
-                showNotification(`Трек добавлен от ${donorName}`);
+                if (donorInput) donorInput.value = '';
             }
+        }
             
             addTrackBtn.addEventListener('click', addTrackAdmin);
             
