@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Заказ музыки на стрим</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Заказ музыки на стрим</h1>
+            <p>Напишите в чат: <code>!музыка Название трека</code></p>
+        </header>
+        
+        <div class="current-track">
+            <h2>🎧 Сейчас играет</h2>
+            <div id="currentTrack">Нет трека</div>
+            <div id="currentArtist"></div>
+        </div>
+        
+        <div class="queue">
+            <h2>📋 Очередь треков</h2>
+            <div id="queueList">
+                <p>Очередь пуста. Будь первым!</p>
+            </div>
+        </div>
+        
+        <div class="recent-donations">
+            <h2>💖 Последние донаты</h2>
+            <div id="donationsList"></div>
+        </div>
+        
+        <footer>
+            <p>Для стримера: <a href="/admin.html">Панель управления</a></p>
+        </footer>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
