@@ -270,3 +270,37 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+function displayDonationHistory() {
+    const history = JSON.parse(localStorage.getItem('donation_history') || '[]');
+    const container = document.getElementById('donationsList');
+    
+    if (!container) return;
+    
+    if (history.length === 0) {
+        container.innerHTML = '<p>Донатов пока нет</p>';
+        return;
+    }
+    
+    let html = '';
+    history.slice(0, 5).forEach(donation => { // Показываем последние 5
+        html += `
+            <div class="donation-item">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>${donation.username}</strong>
+                    <span class="donation-amount">${donation.amount} ${donation.currency}</span>
+                </div>
+                ${donation.message ? `<div class="donation-message">${donation.message}</div>` : ''}
+                <div class="donation-time">${donation.time}</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Обновляем отображение донатов при загрузке и периодически
+document.addEventListener('DOMContentLoaded', function() {
+    displayDonationHistory();
+    setInterval(displayDonationHistory, 10000); // Обновляем каждые 10 секунд
+});
