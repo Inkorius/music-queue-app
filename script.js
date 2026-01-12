@@ -532,3 +532,43 @@ window.clearQueue = function() {
         showNotification('Очередь очищена');
     }
 };
+
+// Функция для обновления отображения очереди в админке
+window.updateAdminDisplay = function() {
+    const adminQueueList = document.getElementById('adminQueueList');
+    const queueCountEl = document.getElementById('queueCount2');
+    
+    if (!adminQueueList) return;
+    
+    if (musicQueue.length === 0) {
+        adminQueueList.innerHTML = '<p>Очередь пуста</p>';
+    } else {
+        let html = '';
+        musicQueue.forEach((track, index) => {
+            html += `
+                <div class="queue-item" style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center;">
+                    <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; font-size: 14px;">
+                        #${index + 1}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 16px; margin-bottom: 4px;">${track.title}</div>
+                        <div style="opacity: 0.8; font-size: 14px; margin-bottom: 6px;">${track.artist}</div>
+                        <div style="display: flex; gap: 15px; font-size: 12px; opacity: 0.7;">
+                            <span style="color: #ffeb3b;">👤 ${track.donor}</span>
+                            <span style="color: #4caf50;">🕐 ${track.time}</span>
+                        </div>
+                    </div>
+                    <button onclick="removeTrack(${track.id})" style="background: rgba(244, 67, 54, 0.2); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 20px; transition: background 0.3s; display: flex; align-items: center; justify-content: center; margin-left: 10px;">
+                        ×
+                    </button>
+                </div>
+            `;
+        });
+        adminQueueList.innerHTML = html;
+    }
+    
+    // Обновляем счётчик
+    if (queueCountEl) {
+        queueCountEl.textContent = musicQueue.length;
+    }
+};
