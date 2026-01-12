@@ -226,12 +226,17 @@
         }
         
         function clearQueue() {
-            if (confirm('Удалить всю очередь?')) {
-                // Используем глобальные функции из script.js
-                window.musicQueue = [];
-                window.saveQueue();
-                window.updateDisplay();
-                showNotification('Очередь очищена');
+            // Просто вызываем глобальную функцию из script.js
+            if (window.clearQueue) {
+                window.clearQueue();
+            } else {
+                // Фолбэк, если функция не загрузилась
+                if (confirm('Удалить всю очередь?')) {
+                    window.musicQueue = [];
+                    window.saveQueue();
+                    window.updateDisplay();
+                    showNotification('Очередь очищена');
+                }
             }
         }
         
@@ -340,15 +345,32 @@
     
             if (!trackInput) return;
     
-            const title = trackInput.value.trim();
+            const inputText = trackInput.value.trim();
+            if (!inputText) return;
+    
+            // Разделяем по дефису "Трек - Исполнитель"
+            let title, artist;
+            if (inputText.includes('-')) {
+                const parts = inputText.split('-').map(p => p.trim());
+                title = parts[0];
+                artist = parts.length > 1 ? parts.slice(1).join(' - ') : 'Неизвестный исполнитель';
+            } else {
+                title = inputText;
+                artist = 'Неизвестный исполнитель';
+            }
+    
             const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
     
-            if (title) {
-                // Используем глобальную функцию addTrack из script.js
-                addTrack(title, 'Исполнитель неизвестен', donor);
-                trackInput.value = '';
-                if (donorInput) donorInput.value = '';
+            // Используем глобальную функцию addTrack из script.js
+            addTrack(title, artist, donor);
+            trackInput.value = '';
+            if (donorInput) donorInput.value = '';
+    
+            // Обновляем отображение в админке
+            if (window.updateAdminDisplay) {
+                window.updateAdminDisplay();
             }
+            updateStats();
         }
         
         // Инициализация админки
