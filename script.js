@@ -521,3 +521,14 @@ window.addTrackAdmin = function() {
         if (donorInput) donorInput.value = '';
     }
 };
+
+// Глобальная функция для очистки очереди
+window.clearQueue = function() {
+    if (confirm('Удалить всю очередь?')) {
+        musicQueue = [];
+        currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
+        saveQueue();
+        updateDisplay();
+        showNotification('Очередь очищена');
+    }
+};
