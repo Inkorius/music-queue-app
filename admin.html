@@ -10,6 +10,7 @@
             max-width: 1000px;
             margin: 20px auto;
             padding: 20px;
+            display: none; /* Скрыто по умолчанию */
         }
         
         .admin-section {
@@ -114,10 +115,119 @@
             align-items: center;
             border-left: 3px solid #667eea;
         }
+        
+        /* Стили для формы входа */
+        .login-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .login-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .login-box h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .login-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: rgba(255,255,255,0.4);
+            transform: translateY(-2px);
+        }
+        
+        .login-error {
+            color: #ff6b6b;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        /* Кнопка выхода */
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(244, 67, 54, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 999;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logout-btn:hover {
+            background: rgba(244, 67, 54, 0.4);
+        }
     </style>
 </head>
 <body>
-    <div class="admin-container">
+    <!-- Форма входа -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <h1>🔒 Панель управления</h1>
+            <input type="password" id="passwordInput" class="login-input" placeholder="Введите пароль" autocomplete="off">
+            <button id="loginBtn" class="login-btn">Войти</button>
+            <div id="loginError" class="login-error">
+                Неверный пароль!
+            </div>
+        </div>
+    </div>
+    
+    <!-- Кнопка выхода (изначально скрыта) -->
+    <button id="logoutBtn" class="logout-btn" onclick="logout()" style="display: none;">🚪 Выйти</button>
+    
+    <!-- Основной контейнер админки -->
+    <div class="admin-container" id="adminContainer">
         <div class="admin-section">
             <h1>🎮 Панель управления музыкой</h1>
             <p>Управляйте очередью и настройками музыки на стриме</p>
@@ -196,6 +306,82 @@
 
     <script src="script.js"></script>
     <script>
+        // ========== СИСТЕМА АВТОРИЗАЦИИ ==========
+        
+        // Пароль для входа
+        const ADMIN_PASSWORD = "OTIwNjkw";
+        
+        // Проверка авторизации при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            setupAuthEvents();
+        });
+        
+        function checkAuth() {
+            const isAuthenticated = localStorage.getItem('admin_authenticated') === 'true';
+            
+            if (isAuthenticated) {
+                // Показать админку
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('adminContainer').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'block';
+            } else {
+                // Показать форму входа
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('adminContainer').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        }
+        
+        function setupAuthEvents() {
+            const loginBtn = document.getElementById('loginBtn');
+            const passwordInput = document.getElementById('passwordInput');
+            
+            // Вход по кнопке
+            loginBtn.addEventListener('click', function() {
+                authenticate();
+            });
+            
+            // Вход по Enter
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    authenticate();
+                }
+            });
+        }
+        
+        function authenticate() {
+            const passwordInput = document.getElementById('passwordInput');
+            const password = passwordInput.value;
+            const errorElement = document.getElementById('loginError');
+            
+            // Кодируем введённый пароль в Base64 для сравнения
+            const encodedPassword = btoa(password);
+            
+            if (encodedPassword === ADMIN_PASSWORD) {
+                // Успешный вход
+                localStorage.setItem('admin_authenticated', 'true');
+                checkAuth();
+                passwordInput.value = '';
+                errorElement.style.display = 'none';
+            } else {
+                // Неверный пароль
+                errorElement.style.display = 'block';
+                passwordInput.value = '';
+                // Вибрация для обратной связи (если поддерживается)
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+            }
+        }
+        
+        function logout() {
+            if (confirm('Выйти из панели управления?')) {
+                localStorage.removeItem('admin_authenticated');
+                checkAuth();
+            }
+        }
+        
         // ========== Дополнительные функции для админки ==========
         
         function skipCurrent() {
@@ -357,9 +543,9 @@
             }
         }
         
-        // ========== Инициализация админки ==========
+        // ========== Инициализация админки (после авторизации) ==========
         
-        document.addEventListener('DOMContentLoaded', function() {
+        function initAdminPanel() {
             const addTrackBtn = document.getElementById('addTrackBtn');
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
@@ -386,6 +572,17 @@
             }, 3000);
             
             updateDAStatus();
+        }
+        
+        // Запустить инициализацию админки только после авторизации
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем каждые 100мс, показывается ли админка (значит, пользователь авторизован)
+            const checkAdminInterval = setInterval(() => {
+                if (document.getElementById('adminContainer').style.display === 'block') {
+                    clearInterval(checkAdminInterval);
+                    initAdminPanel();
+                }
+            }, 100);
         });
     </script>
 </body>
