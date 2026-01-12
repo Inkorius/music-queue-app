@@ -182,39 +182,6 @@
                 <button class="btn" onclick="importQueue()">📤 Импорт очереди</button>
                 <button class="btn btn-warning" onclick="resetAll()">🔄 Сбросить всё</button>
             </div>
-            
-            <div style="margin-top: 20px;">
-                <label style="display: block; margin-bottom: 10px;">
-                    <input type="checkbox" id="autoPlay" checked>
-                    Автопроигрывание следующего трека
-                </label>
-                <label style="display: block; margin-bottom: 10px;">
-                    <input type="checkbox" id="showDonations" checked>
-                    Показывать донаты на виджете
-                </label>
-                <label style="display: block; margin-bottom: 10px;">
-                    <input type="checkbox" id="soundNotify" checked>
-                    Звуковые уведомления
-                </label>
-            </div>
-        </div>
-        
-        <div class="admin-section">
-            <h2>🔗 Ссылки</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <a href="https://inkorius.github.io/music-queue-app/" target="_blank" 
-                   style="color: #ffeb3b; text-decoration: none;">
-                   📺 Виджет для OBS
-                </a>
-                <a href="https://www.donationalerts.com/" target="_blank" 
-                   style="color: #ffeb3b; text-decoration: none;">
-                   💖 DonationAlerts
-                </a>
-                <a href="https://music.yandex.ru/" target="_blank" 
-                   style="color: #ffeb3b; text-decoration: none;">
-                   🎵 Яндекс.Музыка
-                </a>
-            </div>
         </div>
         
         <div class="admin-section">
@@ -234,22 +201,6 @@
         function skipCurrent() {
             playNext();
             showNotification('Текущий трек пропущен');
-        }
-        
-        function clearQueue() {
-            // Просто вызываем глобальную функцию из script.js
-            if (window.clearQueue) {
-                window.clearQueue();
-            } else {
-                // Фолбэк, если функция не загрузилась
-                if (confirm('Удалить всю очередь?')) {
-                    window.musicQueue = [];
-                    window.saveQueue();
-                    window.updateDisplay();
-                    showNotification('Очередь очищена');
-                }
-            }
-            updateAdminQueue();
         }
         
         function importTracks() {
@@ -273,7 +224,7 @@
             
             input.value = '';
             window.saveQueue();
-            updateAdminQueue();
+            if (window.updateAdminQueue) window.updateAdminQueue();
             showNotification(`Добавлено ${tracks.length} треков`);
         }
         
@@ -304,7 +255,7 @@
                         window.musicQueue = imported;
                         window.saveQueue();
                         window.updateDisplay();
-                        updateAdminQueue();
+                        if (window.updateAdminQueue) window.updateAdminQueue();
                         showNotification('Очередь импортирована');
                     } catch (error) {
                         alert('Ошибка импорта: ' + error.message);
@@ -322,7 +273,7 @@
                 window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
                 window.saveQueue();
                 window.updateDisplay();
-                updateAdminQueue();
+                if (window.updateAdminQueue) window.updateAdminQueue();
                 showNotification('Все настройки сброшены');
             }
         }
@@ -330,18 +281,15 @@
         // ========== Обновление статистики ==========
         
         function updateStats() {
-            // Безопасное получение длины очереди
             const queue = window.musicQueue || [];
             const queueLength = queue.length;
             
             document.getElementById('queueCount').textContent = queueLength;
             document.getElementById('queueCount2').textContent = queueLength;
             
-            // Получаем общее количество проигранных треков
             const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
             document.getElementById('totalPlayed').textContent = totalPlayed;
             
-            // Считаем донаты (в демо-режиме)
             const donationsCount = Math.floor(queueLength / 2);
             document.getElementById('donationsCount').textContent = donationsCount;
         }
@@ -370,63 +318,17 @@
             
             const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
             
-            // Используем глобальную функцию addTrack из script.js
             addTrack(title, artist, donor);
             trackInput.value = '';
             if (donorInput) donorInput.value = '';
             
-            // Обновляем отображение в админке
-            updateAdminQueue();
+            if (window.updateAdminQueue) window.updateAdminQueue();
             updateStats();
-        }
-        
-        // ========== Функция для обновления очереди в админке ==========
-        
-        function updateAdminQueue() {
-            const adminQueueList = document.getElementById('adminQueueList');
-            const queueCountEl = document.getElementById('queueCount2');
-            
-            if (!adminQueueList) return;
-            
-            const queue = window.musicQueue || [];
-            
-            if (queue.length === 0) {
-                adminQueueList.innerHTML = '<p>Очередь пуста</p>';
-            } else {
-                let html = '';
-                queue.forEach((track, index) => {
-                    html += `
-                        <div class="queue-item">
-                            <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; font-size: 14px;">
-                                #${index + 1}
-                            </div>
-                            <div style="flex: 1;">
-                                <div style="font-weight: bold; font-size: 16px; margin-bottom: 4px;">${track.title}</div>
-                                <div style="opacity: 0.8; font-size: 14px; margin-bottom: 6px;">${track.artist}</div>
-                                <div style="display: flex; gap: 15px; font-size: 12px; opacity: 0.7;">
-                                    <span style="color: #ffeb3b;">👤 ${track.donor}</span>
-                                    <span style="color: #4caf50;">🕐 ${track.time}</span>
-                                </div>
-                            </div>
-                            <button onclick="removeTrack(${track.id})" style="background: rgba(244, 67, 54, 0.2); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 20px; transition: background 0.3s; display: flex; align-items: center; justify-content: center; margin-left: 10px;">
-                                ×
-                            </button>
-                        </div>
-                    `;
-                });
-                adminQueueList.innerHTML = html;
-            }
-            
-            // Обновляем счётчик
-            if (queueCountEl) {
-                queueCountEl.textContent = queue.length;
-            }
         }
         
         // ========== Обновление статуса DonationAlerts ==========
         
         function updateDAStatus() {
-            // Проверяем, есть ли токен
             const hasToken = localStorage.getItem('da_access_token');
             const tokenExpiry = localStorage.getItem('da_token_expiry');
             
@@ -444,13 +346,11 @@
                 }
             }
             
-            // Обновляем время последней проверки
             const lastCheckEl = document.getElementById('lastCheckTime');
             if (lastCheckEl) {
                 lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
             }
             
-            // Обновляем время до следующей проверки
             const nextCheckEl = document.getElementById('nextCheckTime');
             if (nextCheckEl) {
                 nextCheckEl.textContent = '10';
@@ -460,7 +360,6 @@
         // ========== Инициализация админки ==========
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Настраиваем кнопку добавления
             const addTrackBtn = document.getElementById('addTrackBtn');
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
@@ -475,35 +374,19 @@
                 if (e.key === 'Enter') addTrackAdmin();
             });
             
-            // Обновляем статистику и очередь
+            // Инициализация
             updateStats();
-            updateAdminQueue();
+            if (window.updateAdminQueue) window.updateAdminQueue();
             
-            // Обновляем каждые 3 секунды
+            // Периодическое обновление
             setInterval(updateStats, 3000);
-            setInterval(updateAdminQueue, 3000);
+            setInterval(updateDAStatus, 5000);
+            setInterval(() => {
+                if (window.updateAdminQueue) window.updateAdminQueue();
+            }, 3000);
             
-            // Автосохранение настроек
-            const checkboxes = ['autoPlay', 'showDonations', 'soundNotify'];
-            checkboxes.forEach(id => {
-                const cb = document.getElementById(id);
-                if (cb) {
-                    cb.checked = localStorage.getItem(id) !== 'false';
-                    cb.addEventListener('change', function() {
-                        localStorage.setItem(id, this.checked);
-                    });
-                }
-            });
+            updateDAStatus();
         });
-        
-        // ========== Периодическое обновление ==========
-        
-        // Обновляем статус DonationAlerts каждые 5 секунд
-        setInterval(updateDAStatus, 5000);
-        updateDAStatus(); // Первый вызов
-        
-        // Обновляем очередь каждые 3 секунды
-        setInterval(updateAdminQueue, 3000);
     </script>
 </body>
 </html>
