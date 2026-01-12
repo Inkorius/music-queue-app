@@ -103,12 +103,6 @@ function updateDisplay() {
             queueListEl.innerHTML = html;
         }
     }
-    
-    // Для админки
-    const adminQueueList = document.getElementById('adminQueueList');
-    if (adminQueueList) {
-        adminQueueList.innerHTML = queueListEl ? queueListEl.innerHTML : '';
-    }
 }
 
 // ========== DonationAlerts Integration ==========
@@ -216,15 +210,26 @@ function processDonation(donation) {
                 .trim();
             
             if (trackQuery) {
+                // Разделяем по дефису "Трек - Исполнитель"
+                let title, artist;
+                if (trackQuery.includes('-')) {
+                    const parts = trackQuery.split('-').map(p => p.trim());
+                    title = parts[0];
+                    artist = parts.length > 1 ? parts.slice(1).join(' - ') : 'Неизвестный исполнитель';
+                } else {
+                    title = trackQuery;
+                    artist = 'Неизвестный исполнитель';
+                }
+                
                 // Добавляем трек в очередь
                 addTrack(
-                    trackQuery,
-                    'Исполнитель неизвестен',
+                    title,
+                    artist,
                     `${donation.username} (${donation.amount}${donation.currency})`
                 );
                 
                 // Уведомление о добавлении трека
-                showNotification(`🎵 ${donation.username} заказал: ${trackQuery}`);
+                showNotification(`🎵 ${donation.username} заказал: ${title}`);
             }
         }
     }
@@ -499,28 +504,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateDonationDisplay, 5000);
 });
 
-// ========== Глобальные функции для кнопок ==========
+// ========== Глобальные функции для админки ==========
 
 // Для использования в onclick атрибутах
 window.removeTrack = removeTrack;
 window.playNext = playNext;
-
-// Функция для админки
-window.addTrackAdmin = function() {
-    const trackInput = document.getElementById('trackInput');
-    const donorInput = document.getElementById('donorInput');
-    
-    if (!trackInput) return;
-    
-    const title = trackInput.value.trim();
-    const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
-    
-    if (title) {
-        addTrack(title, 'Исполнитель неизвестен', donor);
-        trackInput.value = '';
-        if (donorInput) donorInput.value = '';
-    }
-};
 
 // Глобальная функция для очистки очереди
 window.clearQueue = function() {
@@ -533,8 +521,8 @@ window.clearQueue = function() {
     }
 };
 
-// Функция для обновления отображения очереди в админке
-window.updateAdminDisplay = function() {
+// Функция для обновления очереди в админке (синхронизация с admin.html)
+window.updateAdminQueue = function() {
     const adminQueueList = document.getElementById('adminQueueList');
     const queueCountEl = document.getElementById('queueCount2');
     
@@ -546,7 +534,7 @@ window.updateAdminDisplay = function() {
         let html = '';
         musicQueue.forEach((track, index) => {
             html += `
-                <div class="queue-item" style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center;">
+                <div class="queue-item">
                     <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; font-size: 14px;">
                         #${index + 1}
                     </div>
