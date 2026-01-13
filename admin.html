@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель управления - Музыка на стрим</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Подключаем Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         .admin-container {
             max-width: 1000px;
@@ -389,11 +391,12 @@
             showNotification('Текущий трек пропущен');
         }
         
-        function importTracks() {
+        async function importTracks() {
             const input = document.getElementById('importInput');
             const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
             
-            tracks.forEach(trackName => {
+            let addedCount = 0;
+            for (const trackName of tracks) {
                 // Разделяем по дефису "Трек - Исполнитель"
                 let title, artist;
                 if (trackName.includes('-')) {
@@ -405,13 +408,14 @@
                     artist = 'Неизвестный исполнитель';
                 }
                 
-                addTrack(title, artist, 'Импорт');
-            });
+                await addTrack(title, artist, 'Импорт');
+                addedCount++;
+            }
             
             input.value = '';
-            window.saveQueue();
+            await window.saveQueue();
             if (window.updateAdminQueue) window.updateAdminQueue();
-            showNotification(`Добавлено ${tracks.length} треков`);
+            showNotification(`Добавлено ${addedCount} треков`);
         }
         
         function exportQueue() {
@@ -428,18 +432,18 @@
             showNotification('Очередь экспортирована');
         }
         
-        function importQueue() {
+        async function importQueue() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
-            input.onchange = function(e) {
+            input.onchange = async function(e) {
                 const file = e.target.files[0];
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     try {
                         const imported = JSON.parse(e.target.result);
                         window.musicQueue = imported;
-                        window.saveQueue();
+                        await window.saveQueue();
                         window.updateDisplay();
                         if (window.updateAdminQueue) window.updateAdminQueue();
                         showNotification('Очередь импортирована');
@@ -452,37 +456,75 @@
             input.click();
         }
         
-        function resetAll() {
+        async function resetAll() {
             if (confirm('Сбросить ВСЕ настройки и очередь?')) {
-                localStorage.clear();
-                window.musicQueue = [];
-                window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
-                window.saveQueue();
-                window.updateDisplay();
-                if (window.updateAdminQueue) window.updateAdminQueue();
-                showNotification('Все настройки сброшены');
+                try {
+                    // Очищаем все таблицы в Supabase
+                    const supabase = window.supabaseClient;
+                    if (supabase) {
+                        await supabase.from('music_queue').delete().neq('id', 0);
+                        await supabase.from('current_track').upsert({
+                            id: 1,
+                            title: 'Нет трека',
+                            artist: 'Добавьте первый трек!'
+                        });
+                        await supabase.from('donations_history').delete().neq('id', 0);
+                    }
+                    
+                    // Очищаем localStorage
+                    localStorage.clear();
+                    
+                    // Сбрасываем локальные переменные
+                    window.musicQueue = [];
+                    window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
+                    
+                    window.updateDisplay();
+                    if (window.updateAdminQueue) window.updateAdminQueue();
+                    showNotification('Все настройки сброшены');
+                } catch (error) {
+                    console.error('Ошибка сброса:', error);
+                    alert('Ошибка при сбросе: ' + error.message);
+                }
             }
         }
         
         // ========== Обновление статистики ==========
         
-        function updateStats() {
-            const queue = window.musicQueue || [];
-            const queueLength = queue.length;
-            
-            document.getElementById('queueCount').textContent = queueLength;
-            document.getElementById('queueCount2').textContent = queueLength;
-            
-            const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
-            document.getElementById('totalPlayed').textContent = totalPlayed;
-            
-            const donationsCount = Math.floor(queueLength / 2);
-            document.getElementById('donationsCount').textContent = donationsCount;
+        async function updateStats() {
+            try {
+                // Получаем статистику из Supabase
+                const supabase = window.supabaseClient;
+                if (!supabase) return;
+                
+                // Количество треков в очереди
+                const { count: queueCount } = await supabase
+                    .from('music_queue')
+                    .select('*', { count: 'exact', head: true });
+                
+                document.getElementById('queueCount').textContent = queueCount || 0;
+                document.getElementById('queueCount2').textContent = queueCount || 0;
+                
+                // Всего проиграно (из истории или localStorage)
+                const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
+                document.getElementById('totalPlayed').textContent = totalPlayed;
+                
+                // Донатов сегодня
+                const today = new Date().toISOString().split('T')[0];
+                const { count: donationsCount } = await supabase
+                    .from('donations_history')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', today + 'T00:00:00Z')
+                    .lte('created_at', today + 'T23:59:59Z');
+                
+                document.getElementById('donationsCount').textContent = donationsCount || 0;
+            } catch (error) {
+                console.error('Ошибка обновления статистики:', error);
+            }
         }
         
         // ========== Функция для ручного добавления трека ==========
         
-        function addTrackAdmin() {
+        async function addTrackAdmin() {
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
             
@@ -504,7 +546,7 @@
             
             const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
             
-            addTrack(title, artist, donor);
+            await addTrack(title, artist, donor);
             trackInput.value = '';
             if (donorInput) donorInput.value = '';
             
@@ -545,10 +587,13 @@
         
         // ========== Инициализация админки (после авторизации) ==========
         
-        function initAdminPanel() {
+        async function initAdminPanel() {
             const addTrackBtn = document.getElementById('addTrackBtn');
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
+            
+            // Загружаем очередь
+            await loadQueueFromSupabase();
             
             addTrackBtn.addEventListener('click', addTrackAdmin);
             
@@ -567,7 +612,8 @@
             // Периодическое обновление
             setInterval(updateStats, 3000);
             setInterval(updateDAStatus, 5000);
-            setInterval(() => {
+            setInterval(async () => {
+                await loadQueueFromSupabase();
                 if (window.updateAdminQueue) window.updateAdminQueue();
             }, 3000);
             
