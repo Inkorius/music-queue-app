@@ -7,46 +7,359 @@
     <link rel="stylesheet" href="style.css">
     <!-- Подключаем Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <!-- Остальные стили без изменений -->
+    <style>
+        .admin-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            display: none; /* Скрыто по умолчанию */
+        }
+        
+        .admin-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .donation-item {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 4px solid gold;
+        }
+        
+        .queue-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid #667eea;
+        }
+        
+        /* Стили для формы входа */
+        .login-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .login-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .login-box h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .login-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: rgba(255,255,255,0.4);
+            transform: translateY(-2px);
+        }
+        
+        .login-error {
+            color: #ff6b6b;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        /* Кнопка выхода */
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(244, 67, 54, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 999;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logout-btn:hover {
+            background: rgba(244, 67, 54, 0.4);
+        }
+    </style>
 </head>
 <body>
-    <!-- HTML структура без изменений -->
+    <!-- Форма входа -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <h1>🔒 Панель управления</h1>
+            <input type="password" id="passwordInput" class="login-input" placeholder="Введите пароль" autocomplete="off">
+            <button id="loginBtn" class="login-btn">Войти</button>
+            <div id="loginError" class="login-error">
+                Неверный пароль!
+            </div>
+        </div>
+    </div>
     
+    <!-- Кнопка выхода (изначально скрыта) -->
+    <button id="logoutBtn" class="logout-btn" style="display: none;">🚪 Выйти</button>
+    
+    <!-- Основной контейнер админки -->
+    <div class="admin-container" id="adminContainer">
+        <div class="admin-section">
+            <h1>🎮 Панель управления музыкой</h1>
+            <p>Управляйте очередью и настройки музыки на стриме</p>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="queueCount">0</div>
+                    <div class="stat-label">Треков в очереди</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPlayed">0</div>
+                    <div class="stat-label">Всего проиграно</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="donationsCount">0</div>
+                    <div class="stat-label">Донатов сегодня</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>🎵 Управление очередью</h2>
+            
+            <div class="control-buttons">
+                <button class="btn btn-success" id="playNextBtn">
+                    ▶ Следующий трек
+                </button>
+                <button class="btn btn-warning" id="skipCurrentBtn">
+                    ⏭ Пропустить текущий
+                </button>
+                <button class="btn btn-danger" id="clearQueueBtn">
+                    🗑 Очистить всю очередь
+                </button>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>➕ Добавить трек вручную</h2>
+            <div class="input-group">
+                <input type="text" id="trackInput" placeholder="Трек - Исполнитель (через дефис)">
+                <input type="text" id="donorInput" placeholder="Имя донатера (опционально)">
+                <button class="btn" id="addTrackBtn">Добавить в очередь</button>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="importInput" placeholder="Список треков через запятую">
+                <button class="btn" id="importTracksBtn">Импортировать</button>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>📋 Текущая очередь (<span id="queueCount2">0</span> треков)</h2>
+            <div id="adminQueueList" class="queue">
+                <p>Очередь пуста</p>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>⚙️ Настройки</h2>
+            <div class="control-buttons">
+                <button class="btn" id="exportQueueBtn">📥 Экспорт очереди</button>
+                <button class="btn" id="importQueueBtn">📤 Импорт очереди</button>
+                <button class="btn btn-warning" id="resetAllBtn">🔄 Сбросить всё</button>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <h2>✅ DonationAlerts</h2>
+            <div style="background: rgba(0,255,0,0.1); padding: 15px; border-radius: 10px;">
+                <p><strong>Статус:</strong> <span id="daStatus" style="color: #4caf50;">✅ Работает</span></p>
+                <p><strong>Последняя проверка:</strong> <span id="lastCheckTime">Только что</span></p>
+                <p><strong>Следующая проверка:</strong> через <span id="nextCheckTime">10</span> сек</p>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
     <script>
         // ========== СИСТЕМА АВТОРИЗАЦИИ ==========
         const ADMIN_PASSWORD = "OTIwNjkw";
         
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuth();
-            setupAuthEvents();
-        });
-        
         function checkAuth() {
+            const loginContainer = document.getElementById('loginContainer');
+            const adminContainer = document.getElementById('adminContainer');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (!loginContainer || !adminContainer || !logoutBtn) {
+                console.log('Элементы не найдены, ждем...');
+                setTimeout(checkAuth, 100);
+                return;
+            }
+            
             const isAuthenticated = localStorage.getItem('admin_authenticated') === 'true';
             
             if (isAuthenticated) {
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('adminContainer').style.display = 'block';
-                document.getElementById('logoutBtn').style.display = 'block';
+                loginContainer.style.display = 'none';
+                adminContainer.style.display = 'block';
+                logoutBtn.style.display = 'block';
+                logoutBtn.onclick = logout;
+                
+                // Инициализируем админку после авторизации
+                initAdminPanel();
             } else {
-                document.getElementById('loginContainer').style.display = 'flex';
-                document.getElementById('adminContainer').style.display = 'none';
-                document.getElementById('logoutBtn').style.display = 'none';
+                loginContainer.style.display = 'flex';
+                adminContainer.style.display = 'none';
+                logoutBtn.style.display = 'none';
             }
         }
         
         function setupAuthEvents() {
-            document.getElementById('loginBtn').addEventListener('click', authenticate);
-            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') authenticate();
-            });
+            const loginBtn = document.getElementById('loginBtn');
+            const passwordInput = document.getElementById('passwordInput');
+            
+            if (loginBtn && passwordInput) {
+                loginBtn.addEventListener('click', authenticate);
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') authenticate();
+                });
+            } else {
+                setTimeout(setupAuthEvents, 100);
+            }
         }
         
         function authenticate() {
             const passwordInput = document.getElementById('passwordInput');
-            const password = passwordInput.value;
             const errorElement = document.getElementById('loginError');
+            
+            if (!passwordInput || !errorElement) return;
+            
+            const password = passwordInput.value;
             
             if (btoa(password) === ADMIN_PASSWORD) {
                 localStorage.setItem('admin_authenticated', 'true');
@@ -70,12 +383,16 @@
         // ========== АДМИН ФУНКЦИИ ==========
         
         function skipCurrent() {
-            window.playNext();
-            window.showNotification('Текущий трек пропущен');
+            if (window.playNext) {
+                window.playNext();
+                if (window.showNotification) window.showNotification('Текущий трек пропущен');
+            }
         }
         
         async function importTracks() {
             const input = document.getElementById('importInput');
+            if (!input) return;
+            
             const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
             
             let addedCount = 0;
@@ -90,12 +407,16 @@
                     artist = 'Неизвестный исполнитель';
                 }
                 
-                await window.addTrack(title, artist, 'Импорт');
-                addedCount++;
+                if (window.addTrack) {
+                    await window.addTrack(title, artist, 'Импорт');
+                    addedCount++;
+                }
             }
             
             input.value = '';
-            window.showNotification(`Добавлено ${addedCount} треков`);
+            if (window.showNotification) {
+                window.showNotification(`Добавлено ${addedCount} треков`);
+            }
         }
         
         function exportQueue() {
@@ -109,7 +430,9 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            window.showNotification('Очередь экспортирована');
+            if (window.showNotification) {
+                window.showNotification('Очередь экспортирована');
+            }
         }
         
         async function importQueue() {
@@ -123,10 +446,18 @@
                     try {
                         const imported = JSON.parse(e.target.result);
                         window.musicQueue = imported;
-                        await window.saveQueue();
-                        window.updateDisplay();
-                        if (window.updateAdminQueue) window.updateAdminQueue();
-                        window.showNotification('Очередь импортирована');
+                        if (window.saveQueue) {
+                            await window.saveQueue();
+                        }
+                        if (window.updateDisplay) {
+                            window.updateDisplay();
+                        }
+                        if (window.updateAdminQueue) {
+                            window.updateAdminQueue();
+                        }
+                        if (window.showNotification) {
+                            window.showNotification('Очередь импортирована');
+                        }
                     } catch (error) {
                         alert('Ошибка импорта: ' + error.message);
                     }
@@ -139,20 +470,28 @@
         async function resetAll() {
             if (confirm('Сбросить ВСЕ настройки и очередь?')) {
                 try {
-                    await window.supabase.from('music_queue').delete().neq('id', 0);
-                    await window.supabase.from('current_track').upsert({
-                        id: 1,
-                        title: 'Нет трека',
-                        artist: 'Добавьте первый трек!'
-                    });
+                    if (window.supabase) {
+                        await window.supabase.from('music_queue').delete().neq('id', 0);
+                        await window.supabase.from('current_track').upsert({
+                            id: 1,
+                            title: 'Нет трека',
+                            artist: 'Добавьте первый трек!'
+                        });
+                    }
                     
                     localStorage.clear();
                     window.musicQueue = [];
                     window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
                     
-                    window.updateDisplay();
-                    if (window.updateAdminQueue) window.updateAdminQueue();
-                    window.showNotification('Все настройки сброшены');
+                    if (window.updateDisplay) {
+                        window.updateDisplay();
+                    }
+                    if (window.updateAdminQueue) {
+                        window.updateAdminQueue();
+                    }
+                    if (window.showNotification) {
+                        window.showNotification('Все настройки сброшены');
+                    }
                 } catch (error) {
                     console.error('Ошибка сброса:', error);
                 }
@@ -161,18 +500,24 @@
         
         async function updateStats() {
             try {
-                const { count: queueCount } = await window.supabase
-                    .from('music_queue')
-                    .select('*', { count: 'exact', head: true });
+                const queueCountEl = document.getElementById('queueCount');
+                const queueCount2El = document.getElementById('queueCount2');
+                const totalPlayedEl = document.getElementById('totalPlayed');
+                const donationsCountEl = document.getElementById('donationsCount');
                 
-                document.getElementById('queueCount').textContent = queueCount || 0;
-                document.getElementById('queueCount2').textContent = queueCount || 0;
+                if (!queueCountEl || !queueCount2El || !totalPlayedEl || !donationsCountEl) {
+                    return;
+                }
+                
+                const queueCount = window.musicQueue ? window.musicQueue.length : 0;
+                queueCountEl.textContent = queueCount;
+                queueCount2El.textContent = queueCount;
                 
                 const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
-                document.getElementById('totalPlayed').textContent = totalPlayed;
+                totalPlayedEl.textContent = totalPlayed;
                 
-                const donationsCount = Math.floor((queueCount || 0) / 2);
-                document.getElementById('donationsCount').textContent = donationsCount;
+                const donationsCount = Math.floor(queueCount / 2);
+                donationsCountEl.textContent = donationsCount;
             } catch (error) {
                 console.error('Ошибка статистики:', error);
             }
@@ -199,82 +544,125 @@
             
             const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
             
-            await window.addTrack(title, artist, donor);
+            if (window.addTrack) {
+                await window.addTrack(title, artist, donor);
+            }
             trackInput.value = '';
             if (donorInput) donorInput.value = '';
             
-            if (window.updateAdminQueue) window.updateAdminQueue();
+            if (window.updateAdminQueue) {
+                window.updateAdminQueue();
+            }
             updateStats();
         }
         
         function updateDAStatus() {
+            const statusEl = document.getElementById('daStatus');
+            const lastCheckEl = document.getElementById('lastCheckTime');
+            const nextCheckEl = document.getElementById('nextCheckTime');
+            
+            if (!statusEl || !lastCheckEl || !nextCheckEl) return;
+            
             const hasToken = localStorage.getItem('da_access_token');
             const tokenExpiry = localStorage.getItem('da_token_expiry');
             
-            const statusEl = document.getElementById('daStatus');
-            if (statusEl) {
-                if (hasToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-                    statusEl.innerHTML = '✅ Работает (токен активен)';
-                    statusEl.style.color = '#4caf50';
-                } else if (hasToken) {
-                    statusEl.innerHTML = '⚠️ Токен истёк, обновление...';
-                    statusEl.style.color = '#ff9800';
-                } else {
-                    statusEl.innerHTML = '❌ Не подключен';
-                    statusEl.style.color = '#f44336';
-                }
+            if (hasToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                statusEl.innerHTML = '✅ Работает (токен активен)';
+                statusEl.style.color = '#4caf50';
+            } else if (hasToken) {
+                statusEl.innerHTML = '⚠️ Токен истёк, обновление...';
+                statusEl.style.color = '#ff9800';
+            } else {
+                statusEl.innerHTML = '❌ Не подключен';
+                statusEl.style.color = '#f44336';
             }
             
-            const lastCheckEl = document.getElementById('lastCheckTime');
-            if (lastCheckEl) {
-                lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-            }
-            
-            const nextCheckEl = document.getElementById('nextCheckTime');
-            if (nextCheckEl) {
-                nextCheckEl.textContent = '10';
-            }
+            lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            nextCheckEl.textContent = '10';
         }
         
         // ========== ИНИЦИАЛИЗАЦИЯ АДМИНКИ ==========
         
-        async function initAdminPanel() {
+        function initAdminPanel() {
+            // Назначаем обработчики кнопкам
+            const playNextBtn = document.getElementById('playNextBtn');
+            const skipCurrentBtn = document.getElementById('skipCurrentBtn');
+            const clearQueueBtn = document.getElementById('clearQueueBtn');
             const addTrackBtn = document.getElementById('addTrackBtn');
+            const importTracksBtn = document.getElementById('importTracksBtn');
+            const exportQueueBtn = document.getElementById('exportQueueBtn');
+            const importQueueBtn = document.getElementById('importQueueBtn');
+            const resetAllBtn = document.getElementById('resetAllBtn');
+            
+            if (playNextBtn) playNextBtn.onclick = () => window.playNext && window.playNext();
+            if (skipCurrentBtn) skipCurrentBtn.onclick = skipCurrent;
+            if (clearQueueBtn) clearQueueBtn.onclick = () => window.clearQueue && window.clearQueue();
+            if (addTrackBtn) addTrackBtn.onclick = addTrackAdmin;
+            if (importTracksBtn) importTracksBtn.onclick = importTracks;
+            if (exportQueueBtn) exportQueueBtn.onclick = exportQueue;
+            if (importQueueBtn) importQueueBtn.onclick = importQueue;
+            if (resetAllBtn) resetAllBtn.onclick = resetAll;
+            
+            // Назначаем обработчики Enter для полей ввода
             const trackInput = document.getElementById('trackInput');
             const donorInput = document.getElementById('donorInput');
+            const importInput = document.getElementById('importInput');
             
-            await window.loadQueueFromSupabase();
+            if (trackInput) {
+                trackInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') addTrackAdmin();
+                });
+            }
             
-            addTrackBtn.addEventListener('click', addTrackAdmin);
+            if (donorInput) {
+                donorInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') addTrackAdmin();
+                });
+            }
             
-            trackInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') addTrackAdmin();
-            });
+            if (importInput) {
+                importInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') importTracks();
+                });
+            }
             
-            donorInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') addTrackAdmin();
-            });
+            // Загружаем очередь
+            if (window.loadQueueFromSupabase) {
+                window.loadQueueFromSupabase().then(() => {
+                    updateStats();
+                    if (window.updateAdminQueue) {
+                        window.updateAdminQueue();
+                    }
+                });
+            } else {
+                updateStats();
+                if (window.updateAdminQueue) {
+                    window.updateAdminQueue();
+                }
+            }
             
-            updateStats();
-            if (window.updateAdminQueue) window.updateAdminQueue();
-            
+            // Периодическое обновление
             setInterval(updateStats, 3000);
             setInterval(updateDAStatus, 5000);
-            setInterval(async () => {
-                await window.loadQueueFromSupabase();
-                if (window.updateAdminQueue) window.updateAdminQueue();
+            setInterval(() => {
+                if (window.loadQueueFromSupabase) {
+                    window.loadQueueFromSupabase().then(() => {
+                        if (window.updateAdminQueue) {
+                            window.updateAdminQueue();
+                        }
+                    });
+                }
             }, 3000);
             
             updateDAStatus();
         }
         
+        // ========== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ==========
+        
         document.addEventListener('DOMContentLoaded', function() {
-            const checkAdminInterval = setInterval(() => {
-                if (document.getElementById('adminContainer').style.display === 'block') {
-                    clearInterval(checkAdminInterval);
-                    initAdminPanel();
-                }
-            }, 100);
+            console.log('DOM загружен, инициализируем админку...');
+            setupAuthEvents();
+            checkAuth();
         });
     </script>
 </body>
