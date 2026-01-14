@@ -232,7 +232,7 @@
     <div class="admin-container" id="adminContainer">
         <div class="admin-section">
             <h1>🎮 Панель управления музыкой</h1>
-            <p>Управляйте очередью и настройками музыки на стриме</p>
+            <p>Управляйте очередью и настройки музыки на стриме</p>
             
             <div class="stats">
                 <div class="stat-card">
@@ -307,269 +307,269 @@
     </div>
 
     <script src="script.js"></script>
-    // В конце admin.html, после строки 280, замените весь код оттуда до конца на:
-
-<script>
-    // ========== СИСТЕМА АВТОРИЗАЦИИ ==========
-    const ADMIN_PASSWORD = "OTIwNjkw";
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        checkAuth();
-        setupAuthEvents();
-    });
-    
-    function checkAuth() {
-        const isAuthenticated = localStorage.getItem('admin_authenticated') === 'true';
+    <script>
+        // ========== СИСТЕМА АВТОРИЗАЦИИ ==========
+        const ADMIN_PASSWORD = "OTIwNjkw";
         
-        if (isAuthenticated) {
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('adminContainer').style.display = 'block';
-            document.getElementById('logoutBtn').style.display = 'block';
-        } else {
-            document.getElementById('loginContainer').style.display = 'flex';
-            document.getElementById('adminContainer').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'none';
-        }
-    }
-    
-    function setupAuthEvents() {
-        document.getElementById('loginBtn').addEventListener('click', authenticate);
-        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') authenticate();
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            setupAuthEvents();
         });
-    }
-    
-    function authenticate() {
-        const passwordInput = document.getElementById('passwordInput');
-        const password = passwordInput.value;
-        const errorElement = document.getElementById('loginError');
         
-        if (btoa(password) === ADMIN_PASSWORD) {
-            localStorage.setItem('admin_authenticated', 'true');
-            checkAuth();
-            passwordInput.value = '';
-            errorElement.style.display = 'none';
-        } else {
-            errorElement.style.display = 'block';
-            passwordInput.value = '';
-            if (navigator.vibrate) navigator.vibrate(200);
+        function checkAuth() {
+            const isAuthenticated = localStorage.getItem('admin_authenticated') === 'true';
+            
+            if (isAuthenticated) {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('adminContainer').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'block';
+            } else {
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('adminContainer').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
         }
-    }
-    
-    function logout() {
-        if (confirm('Выйти из панели управления?')) {
-            localStorage.removeItem('admin_authenticated');
-            checkAuth();
-        }
-    }
-    
-    // ========== АДМИН ФУНКЦИИ ==========
-    
-    function skipCurrent() {
-        playNext();
-        showNotification('Текущий трек пропущен');
-    }
-    
-    async function importTracks() {
-        const input = document.getElementById('importInput');
-        const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
         
-        let addedCount = 0;
-        for (const trackName of tracks) {
+        function setupAuthEvents() {
+            document.getElementById('loginBtn').addEventListener('click', authenticate);
+            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') authenticate();
+            });
+        }
+        
+        function authenticate() {
+            const passwordInput = document.getElementById('passwordInput');
+            const password = passwordInput.value;
+            const errorElement = document.getElementById('loginError');
+            
+            if (btoa(password) === ADMIN_PASSWORD) {
+                localStorage.setItem('admin_authenticated', 'true');
+                checkAuth();
+                passwordInput.value = '';
+                errorElement.style.display = 'none';
+            } else {
+                errorElement.style.display = 'block';
+                passwordInput.value = '';
+                if (navigator.vibrate) navigator.vibrate(200);
+            }
+        }
+        
+        function logout() {
+            if (confirm('Выйти из панели управления?')) {
+                localStorage.removeItem('admin_authenticated');
+                checkAuth();
+            }
+        }
+        
+        // ========== АДМИН ФУНКЦИИ ==========
+        
+        function skipCurrent() {
+            playNext();
+            showNotification('Текущий трек пропущен');
+        }
+        
+        async function importTracks() {
+            const input = document.getElementById('importInput');
+            const tracks = input.value.split(',').map(t => t.trim()).filter(t => t);
+            
+            let addedCount = 0;
+            for (const trackName of tracks) {
+                let title, artist;
+                if (trackName.includes('-')) {
+                    const parts = trackName.split('-').map(p => p.trim());
+                    title = parts[0];
+                    artist = parts.length > 1 ? parts.slice(1).join(' - ') : 'Неизвестный исполнитель';
+                } else {
+                    title = trackName;
+                    artist = 'Неизвестный исполнитель';
+                }
+                
+                await addTrack(title, artist, 'Импорт');
+                addedCount++;
+            }
+            
+            input.value = '';
+            showNotification(`Добавлено ${addedCount} треков`);
+        }
+        
+        function exportQueue() {
+            const queue = window.musicQueue || [];
+            const data = JSON.stringify(queue, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'music-queue-' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showNotification('Очередь экспортирована');
+        }
+        
+        async function importQueue() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        window.musicQueue = imported;
+                        await window.saveQueue();
+                        window.updateDisplay();
+                        if (window.updateAdminQueue) window.updateAdminQueue();
+                        showNotification('Очередь импортирована');
+                    } catch (error) {
+                        alert('Ошибка импорта: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        async function resetAll() {
+            if (confirm('Сбросить ВСЕ настройки и очередь?')) {
+                try {
+                    await window.supabaseClient.from('music_queue').delete().neq('id', 0);
+                    await window.supabaseClient.from('current_track').upsert({
+                        id: 1,
+                        title: 'Нет трека',
+                        artist: 'Добавьте первый трек!'
+                    });
+                    
+                    localStorage.clear();
+                    window.musicQueue = [];
+                    window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
+                    
+                    window.updateDisplay();
+                    if (window.updateAdminQueue) window.updateAdminQueue();
+                    showNotification('Все настройки сброшены');
+                } catch (error) {
+                    console.error('Ошибка сброса:', error);
+                }
+            }
+        }
+        
+        async function updateStats() {
+            try {
+                const { count: queueCount } = await window.supabaseClient
+                    .from('music_queue')
+                    .select('*', { count: 'exact', head: true });
+                
+                document.getElementById('queueCount').textContent = queueCount || 0;
+                document.getElementById('queueCount2').textContent = queueCount || 0;
+                
+                const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
+                document.getElementById('totalPlayed').textContent = totalPlayed;
+                
+                const donationsCount = Math.floor((queueCount || 0) / 2);
+                document.getElementById('donationsCount').textContent = donationsCount;
+            } catch (error) {
+                console.error('Ошибка статистики:', error);
+            }
+        }
+        
+        async function addTrackAdmin() {
+            const trackInput = document.getElementById('trackInput');
+            const donorInput = document.getElementById('donorInput');
+            
+            if (!trackInput) return;
+            
+            const inputText = trackInput.value.trim();
+            if (!inputText) return;
+            
             let title, artist;
-            if (trackName.includes('-')) {
-                const parts = trackName.split('-').map(p => p.trim());
+            if (inputText.includes('-')) {
+                const parts = inputText.split('-').map(p => p.trim());
                 title = parts[0];
                 artist = parts.length > 1 ? parts.slice(1).join(' - ') : 'Неизвестный исполнитель';
             } else {
-                title = trackName;
+                title = inputText;
                 artist = 'Неизвестный исполнитель';
             }
             
-            await addTrack(title, artist, 'Импорт');
-            addedCount++;
-        }
-        
-        input.value = '';
-        showNotification(`Добавлено ${addedCount} треков`);
-    }
-    
-    function exportQueue() {
-        const queue = window.musicQueue || [];
-        const data = JSON.stringify(queue, null, 2);
-        const blob = new Blob([data], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'music-queue-' + new Date().toISOString().split('T')[0] + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        showNotification('Очередь экспортирована');
-    }
-    
-    async function importQueue() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async function(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    window.musicQueue = imported;
-                    await window.saveQueue();
-                    window.updateDisplay();
-                    if (window.updateAdminQueue) window.updateAdminQueue();
-                    showNotification('Очередь импортирована');
-                } catch (error) {
-                    alert('Ошибка импорта: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    }
-    
-    async function resetAll() {
-        if (confirm('Сбросить ВСЕ настройки и очередь?')) {
-            try {
-                await supabase.from('music_queue').delete().neq('id', 0);
-                await supabase.from('current_track').upsert({
-                    id: 1,
-                    title: 'Нет трека',
-                    artist: 'Добавьте первый трек!'
-                });
-                
-                localStorage.clear();
-                window.musicQueue = [];
-                window.currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
-                
-                window.updateDisplay();
-                if (window.updateAdminQueue) window.updateAdminQueue();
-                showNotification('Все настройки сброшены');
-            } catch (error) {
-                console.error('Ошибка сброса:', error);
-            }
-        }
-    }
-    
-    async function updateStats() {
-        try {
-            const { count: queueCount } = await supabase
-                .from('music_queue')
-                .select('*', { count: 'exact', head: true });
+            const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
             
-            document.getElementById('queueCount').textContent = queueCount || 0;
-            document.getElementById('queueCount2').textContent = queueCount || 0;
+            await addTrack(title, artist, donor);
+            trackInput.value = '';
+            if (donorInput) donorInput.value = '';
             
-            const totalPlayed = parseInt(localStorage.getItem('totalPlayed') || '0');
-            document.getElementById('totalPlayed').textContent = totalPlayed;
-            
-            const donationsCount = Math.floor((queueCount || 0) / 2);
-            document.getElementById('donationsCount').textContent = donationsCount;
-        } catch (error) {
-            console.error('Ошибка статистики:', error);
-        }
-    }
-    
-    async function addTrackAdmin() {
-        const trackInput = document.getElementById('trackInput');
-        const donorInput = document.getElementById('donorInput');
-        
-        if (!trackInput) return;
-        
-        const inputText = trackInput.value.trim();
-        if (!inputText) return;
-        
-        let title, artist;
-        if (inputText.includes('-')) {
-            const parts = inputText.split('-').map(p => p.trim());
-            title = parts[0];
-            artist = parts.length > 1 ? parts.slice(1).join(' - ') : 'Неизвестный исполнитель';
-        } else {
-            title = inputText;
-            artist = 'Неизвестный исполнитель';
-        }
-        
-        const donor = donorInput ? donorInput.value.trim() || 'Админ' : 'Админ';
-        
-        await addTrack(title, artist, donor);
-        trackInput.value = '';
-        if (donorInput) donorInput.value = '';
-        
-        if (window.updateAdminQueue) window.updateAdminQueue();
-        updateStats();
-    }
-    
-    function updateDAStatus() {
-        const hasToken = localStorage.getItem('da_access_token');
-        const tokenExpiry = localStorage.getItem('da_token_expiry');
-        
-        const statusEl = document.getElementById('daStatus');
-        if (statusEl) {
-            if (hasToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-                statusEl.innerHTML = '✅ Работает (токен активен)';
-                statusEl.style.color = '#4caf50';
-            } else if (hasToken) {
-                statusEl.innerHTML = '⚠️ Токен истёк, обновление...';
-                statusEl.style.color = '#ff9800';
-            } else {
-                statusEl.innerHTML = '❌ Не подключен';
-                statusEl.style.color = '#f44336';
-            }
-        }
-        
-        const lastCheckEl = document.getElementById('lastCheckTime');
-        if (lastCheckEl) {
-            lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        }
-        
-        const nextCheckEl = document.getElementById('nextCheckTime');
-        if (nextCheckEl) {
-            nextCheckEl.textContent = '10';
-        }
-    }
-    
-    // ========== ИНИЦИАЛИЗАЦИЯ АДМИНКИ ==========
-    
-    async function initAdminPanel() {
-        const addTrackBtn = document.getElementById('addTrackBtn');
-        const trackInput = document.getElementById('trackInput');
-        const donorInput = document.getElementById('donorInput');
-        
-        await loadQueueFromSupabase();
-        
-        addTrackBtn.addEventListener('click', addTrackAdmin);
-        
-        trackInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addTrackAdmin();
-        });
-        
-        donorInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addTrackAdmin();
-        });
-        
-        updateStats();
-        if (window.updateAdminQueue) window.updateAdminQueue();
-        
-        setInterval(updateStats, 3000);
-        setInterval(updateDAStatus, 5000);
-        setInterval(async () => {
-            await loadQueueFromSupabase();
             if (window.updateAdminQueue) window.updateAdminQueue();
-        }, 3000);
+            updateStats();
+        }
         
-        updateDAStatus();
-    }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        const checkAdminInterval = setInterval(() => {
-            if (document.getElementById('adminContainer').style.display === 'block') {
-                clearInterval(checkAdminInterval);
-                initAdminPanel();
+        function updateDAStatus() {
+            const hasToken = localStorage.getItem('da_access_token');
+            const tokenExpiry = localStorage.getItem('da_token_expiry');
+            
+            const statusEl = document.getElementById('daStatus');
+            if (statusEl) {
+                if (hasToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                    statusEl.innerHTML = '✅ Работает (токен активен)';
+                    statusEl.style.color = '#4caf50';
+                } else if (hasToken) {
+                    statusEl.innerHTML = '⚠️ Токен истёк, обновление...';
+                    statusEl.style.color = '#ff9800';
+                } else {
+                    statusEl.innerHTML = '❌ Не подключен';
+                    statusEl.style.color = '#f44336';
+                }
             }
-        }, 100);
-    });
-</script>
+            
+            const lastCheckEl = document.getElementById('lastCheckTime');
+            if (lastCheckEl) {
+                lastCheckEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            }
+            
+            const nextCheckEl = document.getElementById('nextCheckTime');
+            if (nextCheckEl) {
+                nextCheckEl.textContent = '10';
+            }
+        }
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ АДМИНКИ ==========
+        
+        async function initAdminPanel() {
+            const addTrackBtn = document.getElementById('addTrackBtn');
+            const trackInput = document.getElementById('trackInput');
+            const donorInput = document.getElementById('donorInput');
+            
+            await window.loadQueueFromSupabase();
+            
+            addTrackBtn.addEventListener('click', addTrackAdmin);
+            
+            trackInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTrackAdmin();
+            });
+            
+            donorInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTrackAdmin();
+            });
+            
+            updateStats();
+            if (window.updateAdminQueue) window.updateAdminQueue();
+            
+            setInterval(updateStats, 3000);
+            setInterval(updateDAStatus, 5000);
+            setInterval(async () => {
+                await window.loadQueueFromSupabase();
+                if (window.updateAdminQueue) window.updateAdminQueue();
+            }, 3000);
+            
+            updateDAStatus();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkAdminInterval = setInterval(() => {
+                if (document.getElementById('adminContainer').style.display === 'block') {
+                    clearInterval(checkAdminInterval);
+                    initAdminPanel();
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
