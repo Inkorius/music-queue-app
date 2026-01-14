@@ -2,19 +2,21 @@
 const SUPABASE_URL = 'https://zxqnmicfjoqbzazflwjd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4cW5taWNmam9xYnphemZsd2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMTMzMTcsImV4cCI6MjA4Mzg4OTMxN30.2OKy4ZVFeaPGNspmHKh9l7wVIKI1Z96kie0cOaigGxA';
 
+// Проверяем, инициализирована ли Supabase
+if (!window._supabaseInitialized) {
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window._supabaseInitialized = true;
+}
+
 let musicQueue = [];
 let currentTrack = {
     title: "Нет трека", 
     artist: "Добавьте первый трек!"
 };
 
-// Инициализация Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 // Экспорт для админки
 window.musicQueue = musicQueue;
 window.currentTrack = currentTrack;
-window.supabaseClient = supabase;
 window.saveQueue = saveQueueToSupabase;
 window.loadQueueFromSupabase = loadQueueFromSupabase;
 
@@ -26,7 +28,7 @@ let lastDonationId = localStorage.getItem('lastDonationId') || null;
 
 async function loadQueueFromSupabase() {
     try {
-        const { data: queueData } = await supabase
+        const { data: queueData } = await window.supabase
             .from('music_queue')
             .select('*')
             .order('created_at', { ascending: true });
@@ -41,7 +43,7 @@ async function loadQueueFromSupabase() {
             }));
         }
         
-        const { data: currentData } = await supabase
+        const { data: currentData } = await window.supabase
             .from('current_track')
             .select('*')
             .eq('id', 1)
@@ -70,7 +72,7 @@ async function loadQueueFromSupabase() {
 async function saveQueueToSupabase() {
     try {
         // Очищаем старую очередь
-        await supabase.from('music_queue').delete().neq('id', 0);
+        await window.supabase.from('music_queue').delete().neq('id', 0);
         
         // Сохраняем новую очередь
         if (musicQueue.length > 0) {
@@ -80,11 +82,11 @@ async function saveQueueToSupabase() {
                 donor: track.donor
             }));
             
-            await supabase.from('music_queue').insert(queueToSave);
+            await window.supabase.from('music_queue').insert(queueToSave);
         }
         
         // Сохраняем текущий трек
-        await supabase.from('current_track').upsert({
+        await window.supabase.from('current_track').upsert({
             id: 1,
             title: currentTrack.title,
             artist: currentTrack.artist,
@@ -125,7 +127,7 @@ async function addTrack(title, artist = 'Неизвестный исполнит
 
 async function removeTrack(trackId) {
     try {
-        await supabase.from('music_queue').delete().eq('id', trackId);
+        await window.supabase.from('music_queue').delete().eq('id', trackId);
         musicQueue = musicQueue.filter(track => track.id !== trackId);
         localStorage.setItem('musicQueue', JSON.stringify(musicQueue));
         updateDisplay();
@@ -156,7 +158,7 @@ async function playNext() {
 async function clearQueue() {
     if (confirm('Удалить всю очередь?')) {
         try {
-            await supabase.from('music_queue').delete().neq('id', 0);
+            await window.supabase.from('music_queue').delete().neq('id', 0);
             musicQueue = [];
             currentTrack = {title: "Нет трека", artist: "Добавьте первый трек!"};
             localStorage.setItem('musicQueue', JSON.stringify(musicQueue));
@@ -176,7 +178,6 @@ async function clearQueue() {
 
 // ========== DonationAlerts через Supabase ==========
 
-// Инициализация DonationAlerts
 async function initDonationAlerts() {
     try {
         console.log('Получаем токен через Supabase Function...');
@@ -223,7 +224,6 @@ async function initDonationAlerts() {
     }
 }
 
-// Проверка донатов
 async function checkDonationsViaSupabase() {
     const token = localStorage.getItem('da_access_token');
     if (!token) {
@@ -270,15 +270,11 @@ async function checkDonationsViaSupabase() {
     }
 }
 
-// Обработка доната
 async function processDonation(donation) {
-    // Показываем уведомление
     showNotification(`💖 ${donation.username}: ${donation.amount} ${donation.currency}`);
     
-    // Сохраняем в историю
     await saveDonationToHistory(donation);
     
-    // Проверяем команду !музыка
     if (donation.message) {
         const message = donation.message.toLowerCase();
         
@@ -298,7 +294,6 @@ async function processDonation(donation) {
                     artist = 'Неизвестный исполнитель';
                 }
                 
-                // Добавляем трек
                 await addTrack(
                     title,
                     artist,
@@ -311,10 +306,9 @@ async function processDonation(donation) {
     }
 }
 
-// Сохранение доната в историю
 async function saveDonationToHistory(donation) {
     try {
-        const { error } = await supabase
+        const { error } = await window.supabase
             .from('donations_history')
             .insert({
                 donation_id: donation.id,
@@ -328,7 +322,6 @@ async function saveDonationToHistory(donation) {
         
         if (error) {
             console.error('Ошибка сохранения доната в историю:', error);
-            // Сохраняем в localStorage как fallback
             let history = JSON.parse(localStorage.getItem('donation_history') || '[]');
             history.unshift({
                 id: donation.id,
@@ -351,6 +344,8 @@ async function saveDonationToHistory(donation) {
 // ========== Уведомления ==========
 
 function showNotification(message) {
+    if (!document.body) return;
+    
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
@@ -374,148 +369,9 @@ function showNotification(message) {
     setTimeout(() => notification.remove(), 3000);
 }
 
-// ========== Стили для уведомлений ==========
-
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-    
-    .queue-item {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        transition: background 0.3s;
-        border-left: 3px solid #667eea;
-    }
-    
-    .queue-item:hover {
-        background: rgba(255, 255, 255, 0.15);
-    }
-    
-    .queue-number {
-        background: #667eea;
-        color: white;
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 15px;
-        font-weight: bold;
-        font-size: 14px;
-    }
-    
-    .track-info {
-        flex: 1;
-    }
-    
-    .track-title {
-        font-weight: bold;
-        font-size: 16px;
-        margin-bottom: 4px;
-    }
-    
-    .track-artist {
-        opacity: 0.8;
-        font-size: 14px;
-        margin-bottom: 6px;
-    }
-    
-    .track-meta {
-        display: flex;
-        gap: 15px;
-        font-size: 12px;
-        opacity: 0.7;
-    }
-    
-    .donor {
-        color: #ffeb3b;
-    }
-    
-    .time {
-        color: #4caf50;
-    }
-    
-    .remove-btn {
-        background: rgba(244, 67, 54, 0.2);
-        color: white;
-        border: none;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 20px;
-        transition: background 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: 10px;
-    }
-    
-    .remove-btn:hover {
-        background: rgba(244, 67, 54, 0.6);
-    }
-    
-    .empty-queue {
-        text-align: center;
-        padding: 30px;
-        opacity: 0.5;
-        font-style: italic;
-    }
-    
-    .donation-item {
-        background: rgba(255, 215, 0, 0.1);
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        border-left: 3px solid gold;
-    }
-    
-    .donation-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-    
-    .donation-amount {
-        color: gold;
-        font-weight: bold;
-        font-size: 1.1em;
-    }
-    
-    .donation-message {
-        font-style: italic;
-        opacity: 0.9;
-        margin: 8px 0;
-        padding: 5px;
-        background: rgba(255,255,255,0.05);
-        border-radius: 4px;
-    }
-    
-    .donation-time {
-        font-size: 0.8em;
-        opacity: 0.6;
-        text-align: right;
-    }
-`;
-document.head.appendChild(style);
-
 // ========== Обновление отображения ==========
 
 function updateDisplay() {
-    // Текущий трек
     const currentTrackEl = document.getElementById('currentTrack');
     const currentArtistEl = document.getElementById('currentArtist');
     
@@ -526,7 +382,6 @@ function updateDisplay() {
         currentArtistEl.textContent = currentTrack.artist;
     }
     
-    // Очередь
     const queueListEl = document.getElementById('queueList');
     if (queueListEl) {
         if (musicQueue.length === 0) {
@@ -554,11 +409,9 @@ function updateDisplay() {
     }
 }
 
-// Обновление отображения донатов
 async function updateDonationDisplay() {
     try {
-        // Пробуем загрузить из Supabase
-        const { data: donationsData, error } = await supabase
+        const { data: donationsData, error } = await window.supabase
             .from('donations_history')
             .select('*')
             .order('created_at', { ascending: false })
@@ -572,7 +425,6 @@ async function updateDonationDisplay() {
         if (!error && donationsData && donationsData.length > 0) {
             history = donationsData;
         } else {
-            // Fallback на localStorage
             history = JSON.parse(localStorage.getItem('donation_history') || '[]');
         }
         
@@ -614,22 +466,16 @@ async function updateDonationDisplay() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Инициализация приложения...');
     
-    // Загружаем очередь из Supabase
     await loadQueueFromSupabase();
-    
-    // Обновляем отображение
     updateDisplay();
     updateDonationDisplay();
     
-    // Инициализация DonationAlerts
     const savedToken = localStorage.getItem('da_access_token');
     const savedExpiry = localStorage.getItem('da_token_expiry');
     
     if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry)) {
         console.log('✅ Используем сохранённый токен DonationAlerts');
         showNotification('✅ DonationAlerts подключён');
-        
-        // Запускаем проверку донатов
         setInterval(checkDonationsViaSupabase, 10000);
     } else {
         console.log('🔄 Получаем новый токен DonationAlerts...');
@@ -640,7 +486,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
     
-    // Периодическая проверка истечения токена
     setInterval(async () => {
         const expiry = localStorage.getItem('da_token_expiry');
         if (expiry && Date.now() > parseInt(expiry)) {
@@ -649,11 +494,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }, 30000);
     
-    // Периодическое обновление отображения
     setInterval(updateDisplay, 3000);
     setInterval(updateDonationDisplay, 5000);
-    
-    // Периодическая синхронизация с Supabase
     setInterval(async () => {
         await loadQueueFromSupabase();
         updateDisplay();
@@ -666,8 +508,9 @@ window.removeTrack = removeTrack;
 window.playNext = playNext;
 window.clearQueue = clearQueue;
 window.addTrack = addTrack;
+window.showNotification = showNotification;
+window.updateDisplay = updateDisplay;
 
-// Функция для обновления очереди в админке
 window.updateAdminQueue = function() {
     const adminQueueList = document.getElementById('adminQueueList');
     const queueCountEl = document.getElementById('queueCount2');
@@ -701,7 +544,6 @@ window.updateAdminQueue = function() {
         adminQueueList.innerHTML = html;
     }
     
-    // Обновляем счётчик
     if (queueCountEl) {
         queueCountEl.textContent = musicQueue.length;
     }
